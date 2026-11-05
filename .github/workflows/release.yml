@@ -1,0 +1,80 @@
+name: Release
+
+# Builds portable archives. Runs on version tags (v*) and can be started
+# manually; tagged runs also attach the archives to a GitHub release.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: linux-x86_64
+            os: ubuntu-22.04 # older glibc for wider compatibility
+            target: x86_64-unknown-linux-gnu
+            archive: tar.gz
+          - name: macos-aarch64
+            os: macos-14
+            target: aarch64-apple-darwin
+            archive: tar.gz
+          - name: windows-x86_64
+            os: windows-latest
+            target: x86_64-pc-windows-msvc
+            archive: zip
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
+      - name: Build
+        run: cargo build --release --locked --target ${{ matrix.target }}
+      - name: Package
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#v}"
+          [[ "$GITHUB_REF_TYPE" == "tag" ]] || version="dev-${GITHUB_SHA::7}"
+          dir="markly-${version}-${{ matrix.name }}"
+          mkdir "$dir"
+          bin="target/${{ matrix.target }}/release/markly"
+          [[ -f "$bin.exe" ]] && bin="$bin.exe"
+          cp "$bin" README.md LICENSE-MIT LICENSE-APACHE "$dir/"
+          cp assets/fonts/OFL.txt "$dir/FONT-LICENSE-OFL.txt"
+          if [[ "${{ matrix.archive }}" == "zip" ]]; then
+            7z a "$dir.zip" "$dir" > /dev/null
+            echo "ASSET=$dir.zip" >> "$GITHUB_ENV"
+          else
+            tar czf "$dir.tar.gz" "$dir"
+            echo "ASSET=$dir.tar.gz" >> "$GITHUB_ENV"
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.name }}
+          path: ${{ env.ASSET }}
+
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true
