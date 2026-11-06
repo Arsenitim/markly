@@ -13,8 +13,10 @@ Markly (provisional name) — paste, annotate, copy.
 Usage: markly [IMAGE]
 
 Options:
-  -h, --help       Show this help
-  -V, --version    Show version
+  -h, --help                   Show this help
+  -V, --version                Show version
+  --install-desktop-entry      Linux: add Markly with its icon to the app launcher
+  --uninstall-desktop-entry    Linux: remove the launcher entry and icons
 
 Environment:
   MARKLY_DATA_DIR  Override the data directory
@@ -35,6 +37,9 @@ fn main() -> ExitCode {
                 },
                 None => ExitCode::FAILURE,
             };
+        }
+        Some(flag @ ("--install-desktop-entry" | "--uninstall-desktop-entry")) => {
+            return desktop_entry(flag == "--install-desktop-entry");
         }
         Some("-h" | "--help") => {
             println!("{USAGE}");
@@ -82,6 +87,37 @@ fn main() -> ExitCode {
     );
     match result {
         Ok(()) => ExitCode::SUCCESS,
+        Err(e) => {
+            eprintln!("markly: {e}");
+            ExitCode::FAILURE
+        }
+    }
+}
+
+fn desktop_entry(install: bool) -> ExitCode {
+    if !cfg!(all(unix, not(target_os = "macos"))) {
+        eprintln!("markly: desktop entries are a Linux feature");
+        return ExitCode::FAILURE;
+    }
+    let result = if install {
+        std::env::current_exe()
+            .and_then(|exe| std::fs::canonicalize(&exe).or(Ok(exe)))
+            .and_then(|exe| markly::desktop::install(&exe))
+    } else {
+        markly::desktop::uninstall()
+    };
+    match result {
+        Ok(paths) => {
+            let verb = if install { "Installed" } else { "Removed" };
+            for p in &paths {
+                println!("{verb} {}", p.display());
+            }
+            if install {
+                println!("Markly now appears in your application launcher.");
+                println!("If you move this binary, run --install-desktop-entry again.");
+            }
+            ExitCode::SUCCESS
+        }
         Err(e) => {
             eprintln!("markly: {e}");
             ExitCode::FAILURE

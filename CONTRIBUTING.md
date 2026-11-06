@@ -44,6 +44,7 @@ what the tests exercise.
 | `MARKLY_DEBUG_SCRIPT=steps.txt` | Replay synthetic input (clicks, drags, keys, text, copy/paste, screenshots). Syntax in `src/app/script.rs` |
 | `cargo run --release --example demo_document -- DIR [W H]` | Seed DIR with a synthetic screenshot carrying every annotation type, plus `export.png` for preview-vs-export comparison |
 | `cargo run --release --example bench_load -- IMAGE` | Time the stages of opening an image |
+| `cargo run --example make_icons` | Regenerate `assets/icons/` (SVG, PNG, Windows `.ico`, macOS iconset) after changing `src/icon.rs` |
 
 Script coordinates are logical window points (the top bar is 46 pt tall and
 the tool rail 58 pt wide). Example end-to-end check:

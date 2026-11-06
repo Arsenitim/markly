@@ -4,8 +4,10 @@
 
 pub mod app;
 pub mod clipboard;
+pub mod desktop;
 pub mod export;
 pub mod geometry;
+pub mod icon;
 pub mod model;
 pub mod render;
 pub mod settings;

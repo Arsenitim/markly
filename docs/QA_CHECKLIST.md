@@ -18,6 +18,7 @@ Status legend: ✅ verified · ❌ failed · — not yet tested
 | Text editing on canvas | ✅ (scripted input) | — | — | — |
 | History panel and thumbnails | ✅ | — | — | — |
 | Light/dark theme | ✅ | — | — | — |
+| App icon in launcher / dock / Explorer | ✅ desktop entry installs, validates and launches; icon look not verified on screen | — | — | — |
 | File dialogs (Open / Export) | — | — | — | — |
 | Drag & drop | — | — | — | — |
 | Pasting into browsers, chat apps, image editors | — | — | — | — |
@@ -107,7 +108,16 @@ For each tool (A, R, E, T, P, X), with several colours and sizes:
 - [ ] JPEG: transparent areas become white.
 - [ ] The export visually matches the canvas (text position, arrow shapes, pixelation).
 
-## 8. Robustness
+## 8. App icon and launcher
+
+- [ ] Linux: `markly --install-desktop-entry`. Markly appears in the app
+      grid/menu with its icon, launches from there, and the running window
+      shows the icon in the dash and Alt+Tab. `--uninstall-desktop-entry`
+      removes it.
+- [ ] macOS: `Markly.app` shows the icon in Finder and in the Dock while running.
+- [ ] Windows: `markly.exe` shows the icon in Explorer, the taskbar and Alt+Tab.
+
+## 9. Robustness
 
 - [ ] `kill -9` the app 1 s after an edit, then relaunch: at most the last
       ~0.4 s of edits is lost, and nothing is corrupted.

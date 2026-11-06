@@ -225,47 +225,13 @@ pub fn paint(p: &Painter, rect: Rect, icon: Icon, color: Color32) {
     }
 }
 
-/// Window icon: an accent-coloured rounded square with a white arrow.
+/// Window icon, rendered from the shared icon geometry.
 pub fn app_icon() -> egui::IconData {
-    use crate::geometry::Pt;
-    use tiny_skia::{FillRule, Paint, PathBuilder, Pixmap, Rect as SkRect, Transform};
-    const N: u32 = 128;
-    let mut pm = Pixmap::new(N, N).expect("icon pixmap");
-    let n = N as f32;
-    let bg = crate::render::rounded_rect_path(
-        &crate::geometry::Rect::from_points(Pt::new(6.0, 6.0), Pt::new(n - 6.0, n - 6.0)),
-        n * 0.22,
-    )
-    .expect("icon path");
-    let mut paint = Paint {
-        anti_alias: true,
-        ..Paint::default()
-    };
-    paint.set_color_rgba8(92, 104, 245, 255);
-    pm.fill_path(&bg, &paint, FillRule::Winding, Transform::identity(), None);
-    // Soft highlight on the upper half.
-    paint.set_color_rgba8(255, 255, 255, 28);
-    if let Some(r) = SkRect::from_ltrb(6.0, 6.0, n - 6.0, n * 0.5) {
-        let mut mask = PathBuilder::new();
-        mask.push_rect(r);
-        if let Some(hl) = mask.finish() {
-            let mut clip = tiny_skia::Mask::new(N, N).expect("mask");
-            clip.fill_path(&bg, FillRule::Winding, true, Transform::identity());
-            pm.fill_path(&hl, &paint, FillRule::Winding, Transform::identity(), Some(&clip));
-        }
-    }
-    if let Some(arrow) = crate::render::arrow_path(
-        Pt::new(n * 0.27, n * 0.73),
-        Pt::new(n * 0.76, n * 0.26),
-        n * 0.085,
-    ) {
-        paint.set_color_rgba8(255, 255, 255, 255);
-        pm.fill_path(&arrow, &paint, FillRule::Winding, Transform::identity(), None);
-    }
-    let rgba = crate::render::image_from_pixmap(&pm).into_raw();
+    let img = crate::icon::render(128, crate::icon::MARGIN_DEFAULT);
+    let (width, height) = img.dimensions();
     egui::IconData {
-        rgba,
-        width: N,
-        height: N,
+        rgba: img.into_raw(),
+        width,
+        height,
     }
 }

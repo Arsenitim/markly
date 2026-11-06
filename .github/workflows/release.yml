@@ -27,7 +27,7 @@ jobs:
           - name: macos-aarch64
             os: macos-15
             target: aarch64-apple-darwin
-            archive: tar.gz
+            archive: app-zip
           - name: windows-x86_64
             os: windows-latest
             target: x86_64-pc-windows-msvc
@@ -51,15 +51,35 @@ jobs:
           mkdir "$dir"
           bin="target/${{ matrix.target }}/release/markly"
           [[ -f "$bin.exe" ]] && bin="$bin.exe"
-          cp "$bin" README.md LICENSE-MIT LICENSE-APACHE "$dir/"
+          cp README.md LICENSE-MIT LICENSE-APACHE "$dir/"
           cp assets/fonts/OFL.txt "$dir/FONT-LICENSE-OFL.txt"
-          if [[ "${{ matrix.archive }}" == "zip" ]]; then
-            7z a "$dir.zip" "$dir" > /dev/null
-            echo "ASSET=$dir.zip" >> "$GITHUB_ENV"
-          else
-            tar czf "$dir.tar.gz" "$dir"
-            echo "ASSET=$dir.tar.gz" >> "$GITHUB_ENV"
-          fi
+          case "${{ matrix.archive }}" in
+            zip)
+              cp "$bin" "$dir/"
+              7z a "$dir.zip" "$dir" > /dev/null
+              echo "ASSET=$dir.zip" >> "$GITHUB_ENV"
+              ;;
+            app-zip)
+              # macOS: a real application bundle so Finder/Dock show the icon.
+              app="$dir/Markly.app/Contents"
+              mkdir -p "$app/MacOS" "$app/Resources"
+              cp "$bin" "$app/MacOS/markly"
+              iconutil -c icns assets/icons/macos/markly.iconset -o "$app/Resources/Markly.icns"
+              plist_version=$(grep -m1 '^version' Cargo.toml | cut -d'"' -f2)
+              sed "s/@VERSION@/$plist_version/g" packaging/macos/Info.plist > "$app/Info.plist"
+              plutil -lint "$app/Info.plist"
+              # Ad-hoc signature (not notarised): required for a modified bundle on Apple Silicon.
+              codesign --force --deep --sign - "$dir/Markly.app"
+              codesign --verify --verbose "$dir/Markly.app"
+              ditto -c -k --keepParent "$dir" "$dir.zip"
+              echo "ASSET=$dir.zip" >> "$GITHUB_ENV"
+              ;;
+            *)
+              cp "$bin" "$dir/"
+              tar czf "$dir.tar.gz" "$dir"
+              echo "ASSET=$dir.tar.gz" >> "$GITHUB_ENV"
+              ;;
+          esac
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.name }}
