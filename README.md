@@ -48,7 +48,7 @@ no web view.
 | Fit image / Actual size (1:1) | Cmd+0 / Cmd+1 |
 | Zoom in / out | Cmd+= / Cmd+−, or Cmd+mouse wheel, or pinch |
 | Pan | Scroll, drag empty space with Select, middle-drag, or Space+drag |
-| Select/move temporarily | hold Alt (with any drawing tool): click to select, drag to move or resize, release to keep drawing |
+| Select/move temporarily | hold Alt (with any drawing tool): click to select, drag to move or resize, release to keep drawing. Pressing Alt while typing a label finishes it (an empty one is discarded) |
 | Nudge selection | Arrow keys (Shift = 10 px) |
 | Tools | V select (or hold Alt) · A arrow · R rectangle · E ellipse · T text · P pen · X pixelate |
 | Toggle history | H |

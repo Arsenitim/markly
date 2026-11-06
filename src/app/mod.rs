@@ -559,13 +559,17 @@ impl MarklyApp {
         }
     }
 
+    /// Alt on its own (Ctrl+Alt is AltGr on Windows, used to type characters).
+    fn alt_select_held(&self) -> bool {
+        self.ctx
+            .input(|i| i.modifiers.alt && !i.modifiers.ctrl && !i.modifiers.command)
+    }
+
     /// The tool that pointer input uses right now: holding Alt temporarily
-    /// switches to Select (not while typing text or mid-drag with another
-    /// tool), so annotations can be picked and moved without leaving the
-    /// current drawing tool.
+    /// switches to Select, so annotations can be picked and moved without
+    /// leaving the current drawing tool.
     fn effective_tool(&self) -> Tool {
-        let alt = self.ctx.input(|i| i.modifiers.alt);
-        if alt && self.editing.is_none() {
+        if self.alt_select_held() && self.editing.is_none() {
             Tool::Select
         } else {
             self.tool
@@ -875,6 +879,12 @@ impl MarklyApp {
             self.open_path(p);
         } else if ctx.input(|i| !i.raw.dropped_files.is_empty()) {
             self.toast_info("Drop a PNG, JPEG or WebP image");
+        }
+
+        // Alt while editing a text box ends the edit (an empty box is
+        // discarded, typed text is kept) and hands over to temporary Select.
+        if self.editing.is_some() && self.alt_select_held() {
+            self.commit_text_edit();
         }
 
         let text_active = self.text_input_active();
