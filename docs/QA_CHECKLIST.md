@@ -13,7 +13,6 @@ Status legend: ✅ verified · ❌ failed · — not yet tested
 | Launch, restore last document | ✅ | — | — | — |
 | Paste image from the system clipboard | ✅ (`wl-copy`, image/png) | — | — | — |
 | Copy flattened image, readable by another app | ✅ (`wl-paste`) | — | — | — |
-| Alt held = temporary Select | ✅ (scripted input) | — | — | — |
 | Drawing, select, resize, undo/redo, delete | ✅ (scripted input) | — | — | — |
 | Text editing on canvas | ✅ (scripted input) | — | — | — |
 | History panel and thumbnails | ✅ | — | — | — |
@@ -74,9 +73,9 @@ For each tool (A, R, E, T, P, X), with several colours and sizes:
 - [ ] Shift constrains (15° arrows, squares, circles).
 - [ ] A click without dragging does not leave an invisible annotation behind.
 - [ ] The new annotation is selected; colour/size buttons change it, and undo reverts that.
-- [ ] Holding Alt with a drawing tool behaves like Select (rail highlights Select);
-      releasing Alt returns to the drawing tool. Check on your desktop that
-      Alt+drag is not captured by the window manager (some X11 WMs move windows).
+- [ ] With a drawing tool, hovering an annotation outlines it in pink; pressing
+      there selects/moves it, pressing elsewhere draws. Inside a pixelated area
+      a drawing tool always draws.
 - [ ] Select tool: click selects, hover highlights, drag moves, handles resize,
       Delete/Backspace removes, Escape clears selection, arrow keys nudge.
 - [ ] Curved arrow: the middle handle bends it (sideways and lopsided); Shift keeps

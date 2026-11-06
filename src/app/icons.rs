@@ -16,6 +16,8 @@ pub enum Icon {
     Open,
     Paste,
     Copy,
+    /// Arrow leaving an image frame: drag the image out.
+    DragOut,
     Export,
     Undo,
     Redo,
@@ -176,6 +178,21 @@ pub fn paint(p: &Painter, rect: Rect, icon: Icon, color: Color32) {
                 (15.0, 5.0),
                 (15.0, 6.0),
             ]);
+        }
+        Icon::DragOut => {
+            // Image frame, open at the top-right where the arrow leaves it.
+            line(&[
+                (10.5, 7.0),
+                (5.5, 7.0),
+                (3.5, 9.0),
+                (3.5, 18.5),
+                (5.5, 20.5),
+                (15.0, 20.5),
+                (17.0, 18.5),
+                (17.0, 13.5),
+            ]);
+            line(&[(10.0, 14.0), (20.5, 3.5)]);
+            line(&[(14.0, 3.5), (20.5, 3.5), (20.5, 10.0)]);
         }
         Icon::Export => {
             line(&[(12.0, 3.5), (12.0, 14.5)]);

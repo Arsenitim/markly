@@ -83,6 +83,7 @@ fn synthetic_screenshot(w: u32, h: u32) -> image::RgbaImage {
                 text: "sk-live-4f9a-SECRET-TOKEN".into(),
                 color: markly::model::Rgba::rgb(60, 40, 10),
                 size: 22.0 * s,
+                format: Default::default(),
             },
         }],
         1.0,
@@ -154,8 +155,14 @@ fn main() {
         text: "These two need fixing!\nSee the notes below.".into(),
         color: red,
         size: tsize,
+        // Exercise formatting in preview-vs-export comparisons.
+        format: markly::model::TextFormat {
+            bold: true,
+            underline: true,
+            ..Default::default()
+        },
     });
-    let _ = text::measure("x", tsize);
+    let _ = text::measure("x", tsize, Default::default());
 
     let dd = store.doc_dir(&doc.id);
     store::atomic_write(&dd.join("original.png"), &store::encode_png(&img).unwrap()).unwrap();

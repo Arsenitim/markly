@@ -9,7 +9,11 @@ Linux. Built with Rust and egui.
 **Paste an image, annotate it, copy the result, close the app.** Your work is
 remembered automatically, even if you never save it.
 
-![Markly with an annotated screenshot and the history panel](docs/screenshot.png)
+![Markly on macOS (light theme) with an annotated screenshot and the history panel](docs/screenshot-macos.png)
+<sub>macOS</sub>
+
+![Markly on Linux (dark theme) with an annotated screenshot and the history panel](docs/screenshot.png)
+<sub>Linux</sub>
 
 ## Features
 
@@ -18,15 +22,19 @@ remembered automatically, even if you never save it.
 - **Annotate** with clean straight arrows or bold curved arrows, rounded rectangles, ellipses, multi-line text,
   smooth freehand strokes and **pixelation** that really destroys the
   underlying pixels.
+- Text labels can be **bold**, *italic*, underlined and ~~struck through~~
+  (the whole label; toggles in the tool rail or ⌘/Ctrl+B, I, U, Shift+X).
 - Every annotation stays **editable**: select, move, resize with handles,
   recolour, delete, undo/redo.
 - **Copy** (Ctrl/⌘+C) puts the flattened image, at the original resolution,
   on the system clipboard, ready to paste into a browser, chat app or editor.
 - **Export** to PNG or JPEG.
+- **Drag out** (macOS, Windows): drag the grip handle next to Copy onto the
+  desktop or into another app to drop the annotated image as a PNG file.
 - **Automatic local history.** Every pasted or opened image becomes a working
   document that is autosaved and restored on the next launch. A history
   panel with thumbnails lets you reopen or delete earlier documents.
-- A small curated palette; the signature pink (`#FF336C`) is the default for every tool.
+- A small curated palette; the signature pink (`#FF336C`) is the default. The chosen colour is shared by all tools.
 - Light and dark themes (follows the system by default).
 
 What it deliberately does *not* do: no screen capture, no cloud, no accounts,
@@ -44,14 +52,15 @@ no web view.
 | Open image | Cmd+O |
 | Export image | Cmd+Shift+S (or Cmd+S) |
 | Undo / Redo | Cmd+Z / Cmd+Shift+Z (also Cmd+Y) |
+| Bold / Italic / Underline / Strikethrough (text) | Cmd+B / Cmd+I / Cmd+U / Cmd+Shift+X |
 | Delete selected annotation | Delete / Backspace |
 | Cancel drag / clear selection / finish text | Escape |
 | Fit image / Actual size (1:1) | Cmd+0 / Cmd+1 |
 | Zoom in / out | Cmd+= / Cmd+−, or Cmd+mouse wheel, or pinch |
 | Pan | Scroll, drag empty space with Select, middle-drag, or Space+drag |
-| Select/move temporarily | hold Alt (with any drawing tool): click to select, drag to move or resize, release to keep drawing. Pressing Alt while typing a label finishes it (an empty one is discarded) |
+| Select/move while drawing | Hover an annotation with any drawing tool: it gets a pink outline, and pressing there selects and drags it instead of drawing. Press where nothing is outlined to draw. Inside a pixelated area you always draw (use Select to pick it up there); with the Text tool, clicking a label edits it. |
 | Nudge selection | Arrow keys (Shift = 10 px) |
-| Tools | V select (or hold Alt) · A arrow · C curved arrow · R rectangle · E ellipse · T text · P pen · X pixelate |
+| Tools | V select · A arrow · C curved arrow · R rectangle · E ellipse · T text · P pen · X pixelate |
 | Toggle history | H |
 | Constrain (15° arrows, squares, circles, symmetric curve) | hold Shift while drawing/resizing |
 | Bend a curved arrow | drag the filled middle handle of a selected curved arrow (onto the line = straight) |
@@ -105,6 +114,8 @@ Nothing ever leaves your computer.
   Klipper, CopyQ or a GNOME clipboard extension has kept a copy). This is a
   deliberate simplification: no helper process stays behind. Windows and
   macOS keep the copied image after Markly quits.
+- **No drag-out on Linux.** The drag-source APIs available to Rust need a GTK
+  window, and Markly's window is not one; use Copy or Export instead.
 - On Wayland, Markly uses the `wlr/ext-data-control` protocol when the
   compositor offers it, and otherwise the X11 clipboard through XWayland.
   Verified on GNOME 50 (Wayland) only; see [docs/QA_CHECKLIST.md](docs/QA_CHECKLIST.md).

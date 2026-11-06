@@ -2,6 +2,7 @@
 //! live in the library modules.
 
 mod canvas;
+mod dragout;
 mod history;
 pub mod icons;
 mod script;
@@ -12,7 +13,7 @@ use crate::clipboard::{self, ClipEvent, ClipboardWorker, PasteContent};
 use crate::geometry::{Pt, ViewTransform};
 use crate::model::{
     Annotation, AnnotationId, Document, PALETTE, PIXEL_BLOCKS, Rgba, STROKE_WIDTHS, Shape, TEXT_SIZES,
-    size_unit,
+    TextFormat, size_unit,
 };
 use crate::render::PixelGrid;
 use crate::settings::{Settings, ThemePref, Tool, ToolStyle};
@@ -146,6 +147,10 @@ pub struct MarklyApp {
     toast: Option<Toast>,
     dirty_since: Option<Instant>,
     dialog_open: bool,
+    /// Set by the top bar when the drag-out handle starts a drag; the OS
+    /// session is started from `ui()`, which has the window handle.
+    drag_out_requested: bool,
+    drag_out_ended: Arc<std::sync::atomic::AtomicBool>,
     window_size: Option<[f32; 2]>,
     applied_theme: Option<ThemePref>,
     trace: bool,
@@ -258,6 +263,8 @@ impl MarklyApp {
             toast: None,
             dirty_since: None,
             dialog_open: false,
+            drag_out_requested: false,
+            drag_out_ended: Arc::default(),
             window_size: None,
             applied_theme: None,
             trace: std::env::var_os("MARKLY_TRACE").is_some(),
@@ -570,23 +577,6 @@ impl MarklyApp {
         }
     }
 
-    /// Alt on its own (Ctrl+Alt is AltGr on Windows, used to type characters).
-    fn alt_select_held(&self) -> bool {
-        self.ctx
-            .input(|i| i.modifiers.alt && !i.modifiers.ctrl && !i.modifiers.command)
-    }
-
-    /// The tool that pointer input uses right now: holding Alt temporarily
-    /// switches to Select, so annotations can be picked and moved without
-    /// leaving the current drawing tool.
-    fn effective_tool(&self) -> Tool {
-        if self.alt_select_held() && self.editing.is_none() {
-            Tool::Select
-        } else {
-            self.tool
-        }
-    }
-
     /// Tool whose style the palette currently edits.
     fn style_target(&self) -> Option<Tool> {
         let sel = self.editing.as_ref().map(|e| e.id).or(self.selection);
@@ -606,6 +596,7 @@ impl MarklyApp {
     fn current_style(&self) -> Option<ToolStyle> {
         let target = self.style_target()?;
         let mut style = self.settings.styles.get(target)?;
+        style.color = self.settings.color;
         let sel = self.editing.as_ref().map(|e| e.id).or(self.selection);
         if let (Some(od), Some(id)) = (&self.doc, sel)
             && let Some(a) = od.doc.get(id)
@@ -626,13 +617,13 @@ impl MarklyApp {
 
     fn apply_style(&mut self, color: Option<usize>, size: Option<usize>) {
         let Some(target) = self.style_target() else { return };
-        if let Some(s) = self.settings.styles.get_mut(target) {
-            if let Some(c) = color {
-                s.color = c;
-            }
-            if let Some(z) = size {
-                s.size = z;
-            }
+        if let Some(c) = color {
+            self.settings.color = c;
+        }
+        if let Some(z) = size
+            && let Some(s) = self.settings.styles.get_mut(target)
+        {
+            s.size = z;
         }
         self.persist_settings();
         let sel = self.editing.as_ref().map(|e| e.id).or(self.selection);
@@ -658,11 +649,59 @@ impl MarklyApp {
         }
     }
 
+    /// Formatting shown in the rail: the selected/edited label's, else the
+    /// default for new labels.
+    fn current_text_format(&self) -> TextFormat {
+        let sel = self.editing.as_ref().map(|e| e.id).or(self.selection);
+        if let (Some(od), Some(id)) = (&self.doc, sel)
+            && let Some(Annotation {
+                shape: Shape::Text { format, .. },
+                ..
+            }) = od.doc.get(id)
+        {
+            return *format;
+        }
+        self.settings.text_format
+    }
+
+    /// Flips one formatting flag on the selected/edited label (if any) and
+    /// remembers the result for new labels.
+    fn toggle_text_format(&mut self, flip: fn(&mut TextFormat)) {
+        let mut fmt = self.current_text_format();
+        flip(&mut fmt);
+        self.settings.text_format = fmt;
+        self.persist_settings();
+        let sel = self.editing.as_ref().map(|e| e.id).or(self.selection);
+        let Some(id) = sel else { return };
+        let apply = move |doc: &mut Document| {
+            if let Some(Annotation {
+                shape: Shape::Text { format, .. },
+                ..
+            }) = doc.get_mut(id)
+            {
+                *format = fmt;
+            }
+        };
+        if self.editing.is_some() {
+            // Part of the running text-edit undo step.
+            if let Some(od) = &mut self.doc {
+                apply(&mut od.doc);
+            }
+        } else if self
+            .doc
+            .as_ref()
+            .and_then(|od| od.doc.get(id))
+            .is_some_and(|a| matches!(a.shape, Shape::Text { .. }))
+        {
+            self.edit_doc(apply);
+        }
+    }
+
     /// Style values (colour, size in image px) for a new annotation.
     fn new_style(&self, tool: Tool) -> (Rgba, f32) {
         let s = self.settings.styles.get(tool).unwrap_or_default();
         let unit = self.doc.as_ref().map_or(1.0, |d| d.unit);
-        let color = PALETTE.get(s.color).map_or(PALETTE[0].1, |p| p.1);
+        let color = PALETTE.get(self.settings.color).map_or(PALETTE[0].1, |p| p.1);
         (color, presets_for(tool)[s.size.min(4)] * unit)
     }
 
@@ -749,11 +788,7 @@ impl MarklyApp {
             return;
         };
         let source = od.doc.source_path.as_ref().map(PathBuf::from);
-        let stem = source
-            .as_ref()
-            .and_then(|p| p.file_stem())
-            .map(|s| format!("{}-annotated", s.to_string_lossy()))
-            .unwrap_or_else(|| format!("annotated-{}", od.doc.id.split('-').next().unwrap_or("image")));
+        let stem = export_stem(od);
         let dir = source.as_ref().and_then(|p| p.parent().map(Path::to_path_buf));
         self.run_dialog(move || {
             let mut d = rfd::FileDialog::new()
@@ -804,6 +839,24 @@ impl MarklyApp {
             let _ = tx.send(Bg::Exported(res));
             ctx.request_repaint();
         });
+    }
+
+    /// Renders the image to a temp PNG and hands it to the OS drag session.
+    fn start_drag_out(&mut self, frame: &eframe::Frame) {
+        self.finish_interactions();
+        let Some(od) = &self.doc else { return };
+        let name = format!("{}.png", export_stem(od));
+        let t0 = Instant::now();
+        let res = dragout::prepare(&od.image, &od.doc.annotations, &name).and_then(|p| {
+            if self.trace {
+                let ms = t0.elapsed().as_secs_f64() * 1000.0;
+                eprintln!("[markly] drag-out render {ms:.1} ms");
+            }
+            dragout::start(frame, p, self.drag_out_ended.clone(), self.ctx.clone())
+        });
+        if let Err(e) = res {
+            self.toast_error(format!("Couldn't start drag: {e}"));
+        }
     }
 
     // -----------------------------------------------------------------
@@ -887,19 +940,18 @@ impl MarklyApp {
                 .filter(|p| !p.as_os_str().is_empty())
                 .collect()
         });
-        if let Some(p) = dropped
+        // Our own drag-out released back over the window: nothing to open.
+        let dropped_is_empty = dropped.is_empty();
+        let own_drag = !dropped_is_empty && dropped.iter().all(|p| dragout::is_own_file(p));
+        if own_drag {
+            // Ignore.
+        } else if let Some(p) = dropped
             .into_iter()
             .find(|p| clipboard::is_supported_image_path(p))
         {
             self.open_path(p);
-        } else if ctx.input(|i| !i.raw.dropped_files.is_empty()) {
+        } else if !dropped_is_empty {
             self.toast_info("Drop a PNG, JPEG or WebP image");
-        }
-
-        // Alt while editing a text box ends the edit (an empty box is
-        // discarded, typed text is kept) and hands over to temporary Select.
-        if self.editing.is_some() && self.alt_select_held() {
-            self.commit_text_edit();
         }
 
         let text_active = self.text_input_active();
@@ -962,6 +1014,22 @@ impl MarklyApp {
         }
         if pressed(sc(Modifiers::COMMAND, Key::Minus)) {
             self.zoom_step(0.8);
+        }
+
+        // Text formatting: while typing, or with the Text tool / a label selected.
+        if text_active || self.style_target() == Some(Tool::Text) {
+            if pressed(sc(Modifiers::COMMAND, Key::B)) {
+                self.toggle_text_format(|f| f.bold = !f.bold);
+            }
+            if pressed(sc(Modifiers::COMMAND, Key::I)) {
+                self.toggle_text_format(|f| f.italic = !f.italic);
+            }
+            if pressed(sc(Modifiers::COMMAND, Key::U)) {
+                self.toggle_text_format(|f| f.underline = !f.underline);
+            }
+            if pressed(sc(cmd_shift, Key::X)) {
+                self.toggle_text_format(|f| f.strikethrough = !f.strikethrough);
+            }
         }
 
         if text_active {
@@ -1107,7 +1175,7 @@ impl MarklyApp {
 }
 
 impl eframe::App for MarklyApp {
-    fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+    fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame) {
         if self.applied_theme != Some(self.settings.theme) {
             theme::apply(&self.ctx, self.settings.theme);
             self.applied_theme = Some(self.settings.theme);
@@ -1131,6 +1199,9 @@ impl eframe::App for MarklyApp {
             .resizable(false)
             .frame(bar_frame)
             .show(ui, |ui| self.top_bar(ui, &pal));
+        if std::mem::take(&mut self.drag_out_requested) {
+            self.start_drag_out(frame);
+        }
         egui::Panel::left("markly-tools")
             .exact_size(64.0)
             .resizable(false)
@@ -1175,6 +1246,7 @@ impl eframe::App for MarklyApp {
     }
 
     fn raw_input_hook(&mut self, ctx: &egui::Context, raw: &mut egui::RawInput) {
+        dragout::release_pointer_if_ended(&self.drag_out_ended, ctx, raw);
         let Some(s) = &mut self.script else { return };
         if self.loading.is_some() || self.dialog_open {
             ctx.request_repaint();
@@ -1242,24 +1314,45 @@ fn save_screenshot(ctx: &egui::Context, path: PathBuf, close: bool) {
 
 fn install_fonts(ctx: &egui::Context) {
     let mut fonts = egui::FontDefinitions::default();
-    fonts.font_data.insert(
-        text::EGUI_FONT_NAME.to_owned(),
-        Arc::new(egui::FontData::from_static(text::FONT_BYTES)),
-    );
-    let mut family = vec![text::EGUI_FONT_NAME.to_owned()];
+    use_system_ui_font(&mut fonts);
     // Fall back to egui's fonts (e.g. emoji) for missing glyphs.
-    family.extend(
+    let fallback = fonts
+        .families
+        .get(&egui::FontFamily::Proportional)
+        .cloned()
+        .unwrap_or_default();
+    // One egui family per bold/italic variant of the annotation font.
+    for (name, bytes) in text::all_fonts() {
+        fonts
+            .font_data
+            .insert((*name).to_owned(), Arc::new(egui::FontData::from_static(bytes)));
+        let mut family = vec![(*name).to_owned()];
+        family.extend(fallback.iter().cloned());
         fonts
             .families
-            .get(&egui::FontFamily::Proportional)
-            .cloned()
-            .unwrap_or_default(),
-    );
-    fonts
-        .families
-        .insert(egui::FontFamily::Name(text::EGUI_FONT_NAME.into()), family);
+            .insert(egui::FontFamily::Name((*name).into()), family);
+    }
     add_system_symbol_fallback(&mut fonts);
     ctx.set_fonts(fonts);
+}
+
+/// egui's default UI font (Ubuntu Light) has thin stems that render soft and
+/// uneven on macOS. Use the system font there (read at runtime, not bundled)
+/// so the UI text matches native apps.
+fn use_system_ui_font(fonts: &mut egui::FontDefinitions) {
+    if !cfg!(target_os = "macos") {
+        return;
+    }
+    const NAME: &str = "system-ui";
+    let Ok(bytes) = std::fs::read("/System/Library/Fonts/SFNS.ttf") else {
+        return;
+    };
+    fonts
+        .font_data
+        .insert(NAME.to_owned(), Arc::new(egui::FontData::from_owned(bytes)));
+    if let Some(family) = fonts.families.get_mut(&egui::FontFamily::Proportional) {
+        family.insert(0, NAME.to_owned());
+    }
 }
 
 /// Neither egui's bundled fonts nor Noto Sans have the macOS key symbols
@@ -1279,6 +1372,16 @@ fn add_system_symbol_fallback(fonts: &mut egui::FontDefinitions) {
     for family in fonts.families.values_mut() {
         family.push(NAME.to_owned());
     }
+}
+
+/// File name stem for an export of `od`: `<source>-annotated` or `annotated-<id>`.
+fn export_stem(od: &OpenDoc) -> String {
+    od.doc
+        .source_path
+        .as_ref()
+        .and_then(|p| Path::new(p).file_stem())
+        .map(|s| format!("{}-annotated", s.to_string_lossy()))
+        .unwrap_or_else(|| format!("annotated-{}", od.doc.id.split('-').next().unwrap_or("image")))
 }
 
 fn file_label(p: &Path) -> String {

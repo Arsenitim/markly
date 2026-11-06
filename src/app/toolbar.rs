@@ -171,6 +171,18 @@ impl MarklyApp {
                 if self.copy_button(ui, has_doc).clicked() {
                     self.copy_to_clipboard();
                 }
+                if super::dragout::SUPPORTED {
+                    let tip = "Drag the annotated image to the desktop or another app";
+                    let resp = self.drag_out_button(ui, has_doc, pal).on_hover_text(tip);
+                    if has_doc {
+                        if resp.hovered() {
+                            ui.ctx().set_cursor_icon(egui::CursorIcon::Grab);
+                        }
+                        if resp.drag_started() {
+                            self.drag_out_requested = true;
+                        }
+                    }
+                }
                 let export_tip = format!("Export image… ({}Shift+S)", cmd());
                 if icon_button(ui, Icon::Export, &export_tip, has_doc, false, pal, 32.0).clicked() {
                     self.pick_export_file();
@@ -237,6 +249,35 @@ impl MarklyApp {
         resp.on_hover_text(format!("Copy annotated image ({}C)", cmd()))
     }
 
+    /// Outlined companion to the filled Copy button.
+    fn drag_out_button(&self, ui: &mut Ui, enabled: bool, pal: &Palette) -> Response {
+        let size = vec2(46.0, 30.0);
+        let (rect, resp) = ui.allocate_exact_size(size, if enabled { Sense::drag() } else { Sense::hover() });
+        if ui.is_rect_visible(rect) {
+            let p = ui.painter();
+            let pressed = enabled && (resp.is_pointer_button_down_on() || resp.dragged());
+            let (fill, stroke, icon) = if !enabled {
+                (Color32::TRANSPARENT, ACCENT.gamma_multiply(0.35), pal.icon_muted)
+            } else if pressed {
+                (ACCENT, ACCENT, Color32::WHITE)
+            } else if resp.hovered() {
+                (ACCENT.gamma_multiply(0.12), ACCENT, ACCENT)
+            } else {
+                (Color32::TRANSPARENT, ACCENT, ACCENT)
+            };
+            p.rect(
+                rect.shrink(0.75),
+                CornerRadius::same(8),
+                fill,
+                Stroke::new(1.5, stroke),
+                StrokeKind::Inside,
+            );
+            let icon_rect = egui::Rect::from_center_size(rect.center(), vec2(18.0, 18.0));
+            icons::paint(p, icon_rect, Icon::DragOut, icon);
+        }
+        resp
+    }
+
     pub(super) fn tool_rail(&mut self, ui: &mut Ui, pal: &Palette) {
         egui::ScrollArea::vertical()
             .scroll_bar_visibility(egui::scroll_area::ScrollBarVisibility::AlwaysHidden)
@@ -259,7 +300,7 @@ impl MarklyApp {
                     Tool::Pixelate => Icon::Pixelate,
                 };
                 let tip = format!("{} ({})", tool.label(), tool.key_hint());
-                if icon_button(ui, icon, &tip, true, self.effective_tool() == tool, pal, 36.0).clicked() {
+                if icon_button(ui, icon, &tip, true, self.tool == tool, pal, 36.0).clicked() {
                     self.set_tool(tool);
                 }
             }
@@ -386,6 +427,92 @@ impl MarklyApp {
             if picked.is_some() {
                 self.apply_style(None, picked);
             }
+
+            if target == Tool::Text {
+                separator_h(ui, pal);
+                self.text_format_toggles(ui, pal);
+            }
         });
+    }
+
+    /// 2×2 grid of B / I / U / S toggles.
+    fn text_format_toggles(&mut self, ui: &mut Ui, pal: &Palette) {
+        use crate::text::TextFormat;
+        type Flip = fn(&mut TextFormat);
+        let fmt = self.current_text_format();
+        let items: [(&str, bool, TextFormat, Flip, String); 4] = [
+            (
+                "B",
+                fmt.bold,
+                TextFormat {
+                    bold: true,
+                    ..Default::default()
+                },
+                |f| f.bold = !f.bold,
+                format!("Bold ({}B)", cmd()),
+            ),
+            (
+                "I",
+                fmt.italic,
+                TextFormat {
+                    italic: true,
+                    ..Default::default()
+                },
+                |f| f.italic = !f.italic,
+                format!("Italic ({}I)", cmd()),
+            ),
+            (
+                "U",
+                fmt.underline,
+                TextFormat::default(),
+                |f| f.underline = !f.underline,
+                format!("Underline ({}U)", cmd()),
+            ),
+            (
+                "S",
+                fmt.strikethrough,
+                TextFormat::default(),
+                |f| f.strikethrough = !f.strikethrough,
+                format!("Strikethrough ({}Shift+X)", cmd()),
+            ),
+        ];
+        let mut flip: Option<Flip> = None;
+        for row in items.chunks(2) {
+            ui.horizontal(|ui| {
+                ui.spacing_mut().item_spacing.x = 2.0;
+                ui.add_space(((ui.available_width() - 46.0) * 0.5).max(0.0));
+                for (glyph, on, face, f, tip) in row {
+                    let (rect, resp) = ui.allocate_exact_size(vec2(22.0, 22.0), Sense::click());
+                    let p = ui.painter();
+                    if *on {
+                        p.rect_filled(rect, CornerRadius::same(5), ACCENT);
+                    } else if resp.hovered() {
+                        p.rect_filled(rect, CornerRadius::same(5), pal.hover);
+                    }
+                    let color = if *on { Color32::WHITE } else { pal.icon };
+                    let galley = p.layout_no_wrap(
+                        (*glyph).to_owned(),
+                        super::canvas::annotation_font(14.0, *face),
+                        color,
+                    );
+                    let at = rect.center() - galley.size() * 0.5;
+                    let text_rect = egui::Rect::from_min_size(at, galley.size());
+                    p.galley(at, galley, color);
+                    let x = text_rect.x_range().shrink(1.0);
+                    if *glyph == "U" {
+                        p.hline(x, text_rect.bottom() - 3.0, Stroke::new(1.3, color));
+                    }
+                    if *glyph == "S" {
+                        p.hline(x.expand(1.5), text_rect.center().y + 0.5, Stroke::new(1.3, color));
+                    }
+                    if resp.on_hover_text(tip).clicked() {
+                        flip = Some(*f);
+                    }
+                }
+            });
+        }
+        if let Some(f) = flip {
+            self.toggle_text_format(f);
+        }
     }
 }

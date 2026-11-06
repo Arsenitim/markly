@@ -9,7 +9,7 @@ use crate::geometry::{
     Pt, Rect, ViewTransform, arrow_geometry, curved_arrow_geometry, rect_corner_radius, smooth_stroke,
     snap_angle, square_from,
 };
-use crate::model::{Annotation, AnnotationId, Handle, Shape, Style};
+use crate::model::{Annotation, AnnotationId, Handle, Shape, Style, TextFormat};
 use crate::render::{halo_radius, pixel_grid};
 use crate::settings::Tool;
 use crate::text;
@@ -64,10 +64,10 @@ fn to_rect(r: Rect) -> egui::Rect {
     egui::Rect::from_min_max(to_pos(r.min), to_pos(r.max))
 }
 
-pub(super) fn annotation_font(size_points: f32) -> FontId {
+pub(super) fn annotation_font(size_points: f32, format: TextFormat) -> FontId {
     FontId::new(
         size_points.max(1.0),
-        FontFamily::Name(text::EGUI_FONT_NAME.into()),
+        FontFamily::Name(text::egui_font_name(format).into()),
     )
 }
 
@@ -134,7 +134,18 @@ impl MarklyApp {
 
         // ---- painting ------------------------------------------------------
         let view = self.view;
-        let tool = self.effective_tool();
+        let tool = self.tool;
+        // Hover outline target: what a click would select, in every tool.
+        let hover_pos = self.ctx.input(|i| i.pointer.hover_pos());
+        let hover_target = hover_pos
+            .filter(|p| {
+                self.drag.is_none()
+                    && self.editing.is_none()
+                    && resp.hovered()
+                    && self.handle_at(*p).is_none()
+            })
+            .and_then(|p| self.selectable_at(view.screen_to_image(to_pt(p)), tool))
+            .filter(|id| Some(*id) != self.selection);
         let od = self.doc.as_mut().unwrap();
         let img_rect = to_rect(view.image_rect_to_screen(Rect::from_min_size(Pt::ZERO, iw, ih)));
         painter.add(
@@ -167,29 +178,20 @@ impl MarklyApp {
         }
 
         // Selection / hover chrome.
-        let hover_pos = self.ctx.input(|i| i.pointer.hover_pos());
         if let Some(sel) = self.selection
             && let Some(a) = od.doc.get(sel)
             && self.editing.is_none()
         {
             paint_selection(&painter, &view, &a.shape);
-        } else if tool == Tool::Select
-            && self.drag.is_none()
-            && resp.hovered()
-            && let Some(p) = hover_pos
-        {
-            let ip = view.screen_to_image(to_pt(p));
-            if let Some(id) = od.doc.hit_test(ip, view.screen_len_to_image(HIT_TOLERANCE))
-                && let Some(a) = od.doc.get(id)
-            {
-                let r = to_rect(view.image_rect_to_screen(a.shape.bounds())).expand(3.0);
-                painter.rect_stroke(
-                    r,
-                    CornerRadius::same(3),
-                    Stroke::new(1.0, ACCENT.gamma_multiply(0.7)),
-                    StrokeKind::Outside,
-                );
-            }
+        }
+        if let Some(a) = hover_target.and_then(|id| od.doc.get(id)) {
+            let r = to_rect(view.image_rect_to_screen(a.shape.bounds())).expand(3.0);
+            painter.rect_stroke(
+                r,
+                CornerRadius::same(3),
+                Stroke::new(1.5, ACCENT),
+                StrokeKind::Outside,
+            );
         }
 
         self.text_editor_overlay();
@@ -281,7 +283,7 @@ impl MarklyApp {
             }
             if middle_pressed || (space && pressed) {
                 self.drag = Some(Drag::Pan { last: pos });
-            } else if double && self.effective_tool() == Tool::Select {
+            } else if double && self.tool == Tool::Select {
                 self.try_edit_text_at(ip);
             } else {
                 self.begin_press(ip, pos, mods.shift);
@@ -336,6 +338,20 @@ impl MarklyApp {
         }
     }
 
+    /// The annotation a press at `ip` would select with `tool`, if any.
+    /// Drawing tools ignore the inside of pixelation (so shapes can be drawn
+    /// over it), and the Text tool leaves text to its own click-to-edit.
+    fn selectable_at(&self, ip: Pt, tool: Tool) -> Option<AnnotationId> {
+        let od = self.doc.as_ref()?;
+        let tol = self.view.screen_len_to_image(HIT_TOLERANCE);
+        if tool == Tool::Select {
+            return od.doc.hit_test(ip, tol);
+        }
+        let id = od.doc.hit_test_drawing(ip, tol)?;
+        let is_text = matches!(od.doc.get(id)?.shape, Shape::Text { .. });
+        (!(tool == Tool::Text && is_text)).then_some(id)
+    }
+
     fn handle_at(&self, screen: Pos2) -> Option<(AnnotationId, Handle)> {
         let od = self.doc.as_ref()?;
         let id = self.selection?;
@@ -362,7 +378,16 @@ impl MarklyApp {
             return;
         }
 
-        let tool = self.effective_tool();
+        let tool = self.tool;
+        // With a drawing tool, pressing on an existing annotation selects
+        // (and drags) it instead of starting a new shape.
+        if tool != Tool::Select
+            && let Some(id) = self.selectable_at(ip, tool)
+        {
+            self.selection = Some(id);
+            self.drag = Some(Drag::Move { id, last: ip, before });
+            return;
+        }
         match tool {
             Tool::Select => {
                 let hit = self.doc.as_ref().unwrap().doc.hit_test(ip, tol);
@@ -383,6 +408,7 @@ impl MarklyApp {
                         text: String::new(),
                         color,
                         size,
+                        format: self.settings.text_format,
                     });
                     self.selection = Some(id);
                     self.editing = Some(TextEditing {
@@ -530,20 +556,12 @@ impl MarklyApp {
                 if let Some((_, h)) = pos.and_then(|p| self.handle_at(p)) {
                     handle_cursor(h)
                 } else {
-                    match self.effective_tool() {
-                        Tool::Select => {
-                            let over = pos.zip(self.doc.as_ref()).and_then(|(p, od)| {
-                                od.doc.hit_test(
-                                    self.view.screen_to_image(to_pt(p)),
-                                    self.view.screen_len_to_image(HIT_TOLERANCE),
-                                )
-                            });
-                            if over.is_some() {
-                                CursorIcon::Move
-                            } else {
-                                CursorIcon::Default
-                            }
-                        }
+                    let tool = self.tool;
+                    let over =
+                        pos.and_then(|p| self.selectable_at(self.view.screen_to_image(to_pt(p)), tool));
+                    match tool {
+                        _ if over.is_some() => CursorIcon::Move,
+                        Tool::Select => CursorIcon::Default,
                         Tool::Text => CursorIcon::Text,
                         _ => CursorIcon::Crosshair,
                     }
@@ -567,6 +585,7 @@ impl MarklyApp {
                     color,
                     size,
                     text,
+                    format,
                 },
             ..
         }) = od.doc.get_mut(ed.id)
@@ -575,7 +594,7 @@ impl MarklyApp {
             return;
         };
         let view = self.view;
-        let font = annotation_font(*size * view.zoom);
+        let font = annotation_font(*size * view.zoom, *format);
         let screen = to_pos(view.image_to_screen(*pos));
         let caret = rgba_to_color32(*color);
         let id = text_edit_id();
@@ -848,13 +867,19 @@ pub(super) fn paint_shape(painter: &Painter, view: &ViewTransform, shape: &Shape
             text,
             color,
             size,
+            format,
         } => {
             if text.is_empty() && !editing {
                 return;
             }
-            let font = annotation_font(size * z);
-            let galley = painter.layout_no_wrap(text.clone(), font, rgba_to_color32(*color));
+            let fill = rgba_to_color32(*color);
+            let font = annotation_font(size * z, *format);
+            let galley = painter.layout_no_wrap(text.clone(), font, fill);
             let origin = sp(*pos);
+            let bars: Vec<egui::Rect> = text::decoration_rects(text, *size, *format)
+                .into_iter()
+                .map(|r| to_rect(view.image_rect_to_screen(r.translate(*pos))))
+                .collect();
             let halo = rgba_to_color32(color.halo());
             let r = halo_radius(*size) * z;
             if r >= 0.3 {
@@ -866,8 +891,15 @@ pub(super) fn paint_shape(painter: &Painter, view: &ViewTransform, shape: &Shape
                         halo,
                     );
                 }
+                for b in &bars {
+                    let cr = CornerRadius::same(r.round().clamp(0.0, 255.0) as u8);
+                    painter.rect_filled(b.expand(r), cr, halo);
+                }
             }
-            painter.galley(origin, galley, rgba_to_color32(*color));
+            painter.galley(origin, galley, fill);
+            for b in &bars {
+                painter.rect_filled(*b, CornerRadius::ZERO, fill);
+            }
         }
         Shape::Pixelate { .. } => {}
     }

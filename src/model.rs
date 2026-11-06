@@ -5,6 +5,7 @@ use crate::geometry::{
     Pt, Rect, arrow_geometry, curved_arrow_geometry, dist_to_polyline, dist_to_segment, ellipse_points,
     point_in_triangle, square_from,
 };
+pub use crate::text::TextFormat;
 use serde::{Deserialize, Serialize};
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -100,6 +101,8 @@ pub enum Shape {
         text: String,
         color: Rgba,
         size: f32,
+        #[serde(default, skip_serializing_if = "TextFormat::is_plain")]
+        format: TextFormat,
     },
     Freehand {
         points: Vec<Pt>,
@@ -209,8 +212,14 @@ impl Shape {
             Shape::Rectangle { rect, style } | Shape::Ellipse { rect, style } => {
                 rect.expand(style.width * 0.5)
             }
-            Shape::Text { pos, text, size, .. } => {
-                let (w, h) = crate::text::measure(text, *size);
+            Shape::Text {
+                pos,
+                text,
+                size,
+                format,
+                ..
+            } => {
+                let (w, h) = crate::text::measure(text, *size, *format);
                 Rect::from_min_size(*pos, w, h)
             }
             Shape::Freehand { points, style } => Rect::bounding(points)
@@ -524,6 +533,26 @@ impl Document {
     /// Topmost annotation under `p`, honouring render order (pixelation is
     /// always drawn beneath other annotations).
     pub fn hit_test(&self, p: Pt, tol: f32) -> Option<AnnotationId> {
+        self.hit_test_with(p, tol, true)
+    }
+
+    /// Hit test used while a drawing tool is active: pixelation only counts
+    /// near its border, so new shapes can still be drawn on top of it.
+    pub fn hit_test_drawing(&self, p: Pt, tol: f32) -> Option<AnnotationId> {
+        self.hit_test_with(p, tol, false)
+    }
+
+    fn hit_test_with(&self, p: Pt, tol: f32, pixelate_interior: bool) -> Option<AnnotationId> {
+        let pix_hit = |a: &Annotation| match &a.shape {
+            Shape::Pixelate { rect, .. } if !pixelate_interior => {
+                let deep_inside = p.x > rect.min.x + tol
+                    && p.x < rect.max.x - tol
+                    && p.y > rect.min.y + tol
+                    && p.y < rect.max.y - tol;
+                a.shape.hit(p, tol) && !deep_inside
+            }
+            _ => a.shape.hit(p, tol),
+        };
         let top = self
             .annotations
             .iter()
@@ -535,7 +564,7 @@ impl Document {
                 .iter()
                 .rev()
                 .filter(|a| matches!(a.shape, Shape::Pixelate { .. }))
-                .find(|a| a.shape.hit(p, tol))
+                .find(|a| pix_hit(a))
         })
         .map(|a| a.id)
     }
@@ -588,6 +617,11 @@ mod tests {
             text: "Hello\nworld".into(),
             color: PALETTE[4].1,
             size: 24.0,
+            format: TextFormat {
+                bold: true,
+                underline: true,
+                ..Default::default()
+            },
         });
         d.add(Shape::Freehand {
             points: vec![Pt::new(0.0, 0.0), Pt::new(5.0, 5.0), Pt::new(10.0, 0.0)],
@@ -598,6 +632,18 @@ mod tests {
             block: 10.0,
         });
         d
+    }
+
+    #[test]
+    fn text_format_is_optional_in_json() {
+        // Documents saved before formatting existed still load as plain text.
+        let old =
+            r#"{"kind":"text","pos":{"x":1.0,"y":2.0},"text":"hi","color":[255,51,108,255],"size":20.0}"#;
+        let shape: Shape = serde_json::from_str(old).unwrap();
+        assert!(matches!(shape, Shape::Text { format, .. } if format.is_plain()));
+        // Plain text is written without the field, keeping files unchanged.
+        let json = serde_json::to_string(&shape).unwrap();
+        assert!(!json.contains("format"), "{json}");
     }
 
     #[test]
@@ -643,8 +689,22 @@ mod tests {
             text: "x".into(),
             color: PALETTE[0].1,
             size: 10.0,
+            format: Default::default(),
         });
         assert!(!ids.contains(&new));
+    }
+
+    #[test]
+    fn drawing_hit_test_skips_pixelate_interior() {
+        let mut d = Document::new(400, 400, "original.png", None);
+        let pix = d.add(Shape::Pixelate {
+            rect: Rect::from_points(Pt::new(100.0, 100.0), Pt::new(300.0, 300.0)),
+            block: 10.0,
+        });
+        assert_eq!(d.hit_test(Pt::new(200.0, 200.0), 4.0), Some(pix));
+        assert_eq!(d.hit_test_drawing(Pt::new(200.0, 200.0), 4.0), None);
+        assert_eq!(d.hit_test_drawing(Pt::new(102.0, 200.0), 4.0), Some(pix));
+        assert_eq!(d.hit_test_drawing(Pt::new(97.0, 200.0), 4.0), Some(pix));
     }
 
     #[test]

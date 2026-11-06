@@ -99,11 +99,19 @@ pub fn draw_shape(pixmap: &mut Pixmap, shape: &Shape, t: Transform) {
             text,
             color,
             size,
+            format,
         } => {
-            if let Some(path) = text_path(text, *size, *pos) {
-                let halo_w = halo_radius(*size) * 2.0;
-                pixmap.stroke_path(&path, &paint(color.halo()), &round_stroke(halo_w), t, None);
-                pixmap.fill_path(&path, &paint(*color), FillRule::Winding, t, None);
+            let paths = [
+                text_path(text, *size, *format, *pos),
+                decoration_path(text, *size, *format, *pos),
+            ];
+            let halo_w = halo_radius(*size) * 2.0;
+            // All halos first, so a bar's halo never covers letters.
+            for path in paths.iter().flatten() {
+                pixmap.stroke_path(path, &paint(color.halo()), &round_stroke(halo_w), t, None);
+            }
+            for path in paths.iter().flatten() {
+                pixmap.fill_path(path, &paint(*color), FillRule::Winding, t, None);
             }
         }
         Shape::Pixelate { .. } => {} // handled in `draw_annotations`
@@ -213,10 +221,23 @@ pub fn rounded_rect_path(r: &Rect, radius: f32) -> Option<Path> {
     pb.finish()
 }
 
+/// Underline and strikethrough bars, in image space. Kept apart from the
+/// glyph path: overlapping contours of opposite winding would cut holes.
+pub fn decoration_path(s: &str, size: f32, format: text::TextFormat, pos: Pt) -> Option<Path> {
+    let mut pb = PathBuilder::new();
+    for r in text::decoration_rects(s, size, format) {
+        let r = r.translate(pos);
+        if let Some(sr) = tiny_skia::Rect::from_ltrb(r.min.x, r.min.y, r.max.x, r.max.y) {
+            pb.push_rect(sr);
+        }
+    }
+    pb.finish()
+}
+
 /// Glyph outlines for a text annotation as a single path in image space.
-pub fn text_path(s: &str, size: f32, pos: Pt) -> Option<Path> {
-    let font = text::font();
-    let layout = text::layout(s, size);
+pub fn text_path(s: &str, size: f32, format: text::TextFormat, pos: Pt) -> Option<Path> {
+    let font = text::font(format);
+    let layout = text::layout(s, size, format);
     let sf = font.as_scaled(layout.scale);
     let (hs, vs) = (sf.h_scale_factor(), sf.v_scale_factor());
     let mut pb = PathBuilder::new();
@@ -563,6 +584,7 @@ mod tests {
             text: "Hi!".into(),
             color: PALETTE[7].1,
             size: 32.0,
+            format: Default::default(),
         });
         let out = flatten(&img, &d.annotations);
         let dark = out.pixels().filter(|p| p.0[0] < 80).count();

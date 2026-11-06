@@ -60,6 +60,7 @@ fn paste_annotate_restart_restore() {
             text: "Broken buttons".into(),
             color: PALETTE[0].1,
             size: TEXT_SIZES[2],
+            format: Default::default(),
         });
         doc.add(Shape::Pixelate {
             rect: Rect::from_points(Pt::new(10.0, 300.0), Pt::new(200.0, 390.0)),

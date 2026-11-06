@@ -615,6 +615,7 @@ mod tests {
                 text: format!("{i}"),
                 color: PALETTE[0].1,
                 size: 10.0,
+                format: Default::default(),
             });
             let (base, scale) = thumbnail_base(&img);
             w.save_document(

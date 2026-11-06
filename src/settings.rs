@@ -43,7 +43,7 @@ impl Tool {
     /// Single-key shortcut (when not editing text).
     pub fn key_hint(self) -> &'static str {
         match self {
-            Tool::Select => "V or hold Alt",
+            Tool::Select => "V",
             Tool::Arrow => "A",
             Tool::CurvedArrow => "C",
             Tool::Rectangle => "R",
@@ -59,9 +59,12 @@ impl Tool {
     }
 }
 
-/// Palette and size indices remembered per tool.
+/// Palette and size indices. The size is remembered per tool; the colour is
+/// global (`Settings::color`) and only carried here for the palette UI.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
 pub struct ToolStyle {
+    #[serde(skip)]
     pub color: usize,
     pub size: usize,
 }
@@ -129,6 +132,10 @@ pub struct Settings {
     pub window_size: Option<[f32; 2]>,
     pub tool: Tool,
     pub styles: ToolStyles,
+    /// Palette index shared by every tool.
+    pub color: usize,
+    /// Formatting for new text annotations.
+    pub text_format: crate::text::TextFormat,
     pub theme: ThemePref,
     pub history_open: bool,
 }
@@ -140,6 +147,8 @@ impl Default for Settings {
             window_size: None,
             tool: Tool::Arrow,
             styles: ToolStyles::default(),
+            color: 0,
+            text_format: Default::default(),
             theme: ThemePref::System,
             history_open: false,
         }

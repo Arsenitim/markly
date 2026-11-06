@@ -93,6 +93,9 @@ pub fn install(ctx: &egui::Context) {
             style.spacing.item_spacing = egui::vec2(6.0, 6.0);
             style.spacing.button_padding = egui::vec2(10.0, 5.0);
             style.interaction.tooltip_delay = 0.35;
+            // Each glyph rasterised once per pixel position, not at four
+            // fractional offsets: steadier stems, less blur.
+            style.visuals.text_options.subpixel_binning = false;
         });
     }
 }
