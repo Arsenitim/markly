@@ -1,6 +1,6 @@
 [package]
 name = "markly"
-version = "0.1.5"
+version = "0.1.6"
 edition = "2024"
 rust-version = "1.88"
 description = "A lightweight, local-first image annotation utility (provisional name)."

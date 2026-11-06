@@ -70,8 +70,13 @@ pub fn draw_shape(pixmap: &mut Pixmap, shape: &Shape, t: Transform) {
                 pixmap.fill_path(&path, &paint(style.color), FillRule::Winding, t, None);
             }
         }
-        Shape::CurvedArrow { start, end, style } => {
-            if let Some(path) = curved_arrow_path(*start, *end, style.width) {
+        Shape::CurvedArrow {
+            start,
+            end,
+            style,
+            bend,
+        } => {
+            if let Some(path) = curved_arrow_path(*start, *end, style.width, *bend) {
                 pixmap.fill_path(&path, &paint(style.color), FillRule::Winding, t, None);
             }
         }
@@ -136,8 +141,8 @@ fn draw_polyline(pixmap: &mut Pixmap, pts: &[Pt], width: f32, color: Rgba, t: Tr
 /// shaft runs under the head).
 /// Curved arrow: tapered shaft outline + swept head (+ round tail tip), all
 /// with the same orientation so the non-zero fill is a union.
-pub fn curved_arrow_path(start: Pt, end: Pt, width: f32) -> Option<Path> {
-    let g = crate::geometry::curved_arrow_geometry(start, end, width)?;
+pub fn curved_arrow_path(start: Pt, end: Pt, width: f32, bend: Pt) -> Option<Path> {
+    let g = crate::geometry::curved_arrow_geometry(start, end, width, bend)?;
     let mut pb = PathBuilder::new();
     push_polygon(&mut pb, &g.shaft_outline());
     push_polygon(&mut pb, &g.head);

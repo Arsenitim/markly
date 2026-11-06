@@ -53,7 +53,8 @@ no web view.
 | Nudge selection | Arrow keys (Shift = 10 px) |
 | Tools | V select (or hold Alt) · A arrow · C curved arrow · R rectangle · E ellipse · T text · P pen · X pixelate |
 | Toggle history | H |
-| Constrain (15° arrows, squares, circles) | hold Shift while drawing/resizing |
+| Constrain (15° arrows, squares, circles, symmetric curve) | hold Shift while drawing/resizing |
+| Bend a curved arrow | drag the filled middle handle of a selected curved arrow (onto the line = straight) |
 
 While you are typing in a text annotation, Cmd+C/V/X/Z and Delete act on the
 text, not on the image.

@@ -79,6 +79,8 @@ For each tool (A, R, E, T, P, X), with several colours and sizes:
       Alt+drag is not captured by the window manager (some X11 WMs move windows).
 - [ ] Select tool: click selects, hover highlights, drag moves, handles resize,
       Delete/Backspace removes, Escape clears selection, arrow keys nudge.
+- [ ] Curved arrow: the middle handle bends it (sideways and lopsided); Shift keeps
+      it symmetric; moving the endpoints keeps the bend; export matches.
 - [ ] Escape during a drag cancels it.
 - [ ] Text: click to place, type several lines (Enter), Escape or click
       elsewhere finishes. Empty text is discarded. Clicking existing text with

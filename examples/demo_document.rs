@@ -122,11 +122,13 @@ fn main() {
         start: p(1120.0, 600.0),
         end: p(1350.0, 330.0),
         style: st(red, 5.5),
+        bend: markly::geometry::DEFAULT_CURVE_BEND,
     });
     doc.add(Shape::CurvedArrow {
         start: p(300.0, 960.0),
         end: p(320.0, 880.0),
         style: st(red, 3.5),
+        bend: Pt::new(0.0, -0.25),
     });
     doc.add(Shape::Rectangle {
         rect: Rect::from_points(p(290.0, 90.0), p(690.0, 330.0)),

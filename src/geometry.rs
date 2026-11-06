@@ -386,18 +386,53 @@ impl CurvedArrowGeometry {
     }
 }
 
-/// How far the shaft bows sideways, as a fraction of the arrow length.
-const CURVE_BEND: f32 = 0.10;
+/// Default bend of a new curved arrow: the Bézier control point offset from
+/// the chord midpoint in arrow-local units (x along start→end, y sideways),
+/// as fractions of the arrow length.
+pub const DEFAULT_CURVE_BEND: Pt = Pt::new(0.0, 0.10);
+/// Limits that keep the shaft from folding over itself.
+const MAX_BEND_ALONG: f32 = 0.45;
+const MAX_BEND_SIDE: f32 = 0.75;
 
-pub fn curved_arrow_geometry(start: Pt, end: Pt, width: f32) -> Option<CurvedArrowGeometry> {
+fn curve_control(start: Pt, end: Pt, bend: Pt) -> Pt {
+    let v = end - start;
+    let dir = v.normalized();
+    (start + end) * 0.5 + dir * (v.len() * bend.x) + dir.perp() * (v.len() * bend.y)
+}
+
+/// Where the bend handle is drawn: the curve's midpoint (t = 0.5).
+pub fn curved_arrow_mid(start: Pt, end: Pt, bend: Pt) -> Pt {
+    let c = curve_control(start, end, bend);
+    start * 0.25 + c * 0.5 + end * 0.25
+}
+
+/// Bend that makes the curve pass through `p` at its midpoint. With
+/// `symmetric`, the along-arrow component is dropped.
+pub fn bend_through(start: Pt, end: Pt, p: Pt, symmetric: bool) -> Pt {
+    let v = end - start;
+    let len = v.len();
+    if len < 1.0e-3 {
+        return DEFAULT_CURVE_BEND;
+    }
+    let dir = v * (1.0 / len);
+    // B(0.5) = mid + (ctrl - mid) / 2  ⇒  ctrl - mid = 2 (p - mid)
+    let off = (p - (start + end) * 0.5) * 2.0;
+    let along = if symmetric { 0.0 } else { off.dot(dir) / len };
+    Pt::new(
+        along.clamp(-MAX_BEND_ALONG, MAX_BEND_ALONG),
+        (off.dot(dir.perp()) / len).clamp(-MAX_BEND_SIDE, MAX_BEND_SIDE),
+    )
+}
+
+pub fn curved_arrow_geometry(start: Pt, end: Pt, width: f32, bend: Pt) -> Option<CurvedArrowGeometry> {
     let v = end - start;
     let len = v.len();
     if len < 1.0e-3 || !len.is_finite() {
         return None;
     }
     let w = width.max(0.5);
-    // Quadratic Bézier start → end, control point pushed to one side.
-    let ctrl = (start + end) * 0.5 + v.normalized().perp() * (len * CURVE_BEND);
+    // Quadratic Bézier start → end through the (user-adjustable) control point.
+    let ctrl = curve_control(start, end, bend);
     let at = |t: f32| {
         let u = 1.0 - t;
         start * (u * u) + ctrl * (2.0 * u * t) + end * (t * t)
@@ -623,7 +658,8 @@ mod tests {
 
     #[test]
     fn curved_arrow_tapers_and_bows() {
-        let g = curved_arrow_geometry(Pt::new(0.0, 0.0), Pt::new(300.0, 0.0), 8.0).unwrap();
+        let g =
+            curved_arrow_geometry(Pt::new(0.0, 0.0), Pt::new(300.0, 0.0), 8.0, DEFAULT_CURVE_BEND).unwrap();
         let first = g.spine.first().unwrap();
         let last = g.spine.last().unwrap();
         assert!(first.2 < last.2, "shaft gets thicker towards the head");
@@ -632,7 +668,24 @@ mod tests {
         assert!(mid.y.abs() > 10.0, "bowed: {mid:?}");
         assert!(approx(g.head[0], Pt::new(300.0, 0.0)));
         assert_eq!(g.shaft_outline().len(), g.spine.len() * 2);
-        assert!(curved_arrow_geometry(Pt::ZERO, Pt::ZERO, 4.0).is_none());
+        assert!(curved_arrow_geometry(Pt::ZERO, Pt::ZERO, 4.0, DEFAULT_CURVE_BEND).is_none());
+    }
+
+    #[test]
+    fn bend_handle_roundtrip() {
+        let (a, b) = (Pt::new(10.0, 20.0), Pt::new(210.0, 120.0));
+        for bend in [Pt::new(0.0, 0.1), Pt::new(0.2, -0.3), Pt::new(-0.1, 0.0)] {
+            let mid = curved_arrow_mid(a, b, bend);
+            assert!(approx(bend_through(a, b, mid, false), bend));
+        }
+        // Dragging the handle onto the chord straightens the arrow.
+        let straight = bend_through(a, b, (a + b) * 0.5, false);
+        assert!(straight.len() < 1e-5);
+        // Symmetric mode drops the along-arrow component; limits apply.
+        let p = curved_arrow_mid(a, b, Pt::new(0.3, 0.2));
+        assert!(bend_through(a, b, p, true).x.abs() < 1e-6);
+        let far = bend_through(a, b, Pt::new(-5000.0, 5000.0), false);
+        assert!(far.x.abs() <= MAX_BEND_ALONG && far.y.abs() <= MAX_BEND_SIDE);
     }
 
     #[test]

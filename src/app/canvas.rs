@@ -422,6 +422,7 @@ impl MarklyApp {
                         start: ip,
                         end: ip,
                         style,
+                        bend: crate::geometry::DEFAULT_CURVE_BEND,
                     },
                     Tool::Rectangle => Shape::Rectangle { rect: r, style },
                     Tool::Ellipse => Shape::Ellipse { rect: r, style },
@@ -618,6 +619,7 @@ impl MarklyApp {
 fn handle_cursor(h: Handle) -> CursorIcon {
     match h {
         Handle::Start | Handle::End => CursorIcon::Crosshair,
+        Handle::Mid => CursorIcon::Grab,
         Handle::Box(-1, -1) | Handle::Box(1, 1) => CursorIcon::ResizeNwSe,
         Handle::Box(1, -1) | Handle::Box(-1, 1) => CursorIcon::ResizeNeSw,
         Handle::Box(_, 0) => CursorIcon::ResizeHorizontal,
@@ -741,8 +743,13 @@ pub(super) fn paint_shape(painter: &Painter, view: &ViewTransform, shape: &Shape
     let z = view.zoom;
     let sp = |p: Pt| to_pos(view.image_to_screen(p));
     match shape {
-        Shape::CurvedArrow { start, end, style } => {
-            let Some(g) = curved_arrow_geometry(*start, *end, style.width) else {
+        Shape::CurvedArrow {
+            start,
+            end,
+            style,
+            bend,
+        } => {
+            let Some(g) = curved_arrow_geometry(*start, *end, style.width, *bend) else {
                 return;
             };
             let c = rgba_to_color32(style.color);
@@ -891,6 +898,10 @@ fn paint_selection(painter: &Painter, view: &ViewTransform, shape: &Shape) {
         match h {
             Handle::Start | Handle::End => {
                 painter.circle(c, HANDLE_RADIUS, Color32::WHITE, handle_stroke);
+            }
+            Handle::Mid => {
+                // Filled accent dot: "drag to bend".
+                painter.circle(c, HANDLE_RADIUS, ACCENT, Stroke::new(1.5, Color32::WHITE));
             }
             Handle::Box(..) => {
                 let r = egui::Rect::from_center_size(c, vec2(HANDLE_RADIUS * 1.7, HANDLE_RADIUS * 1.7));

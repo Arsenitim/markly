@@ -80,6 +80,10 @@ pub enum Shape {
         start: Pt,
         end: Pt,
         style: Style,
+        /// Control-point offset in arrow-local units (see
+        /// `geometry::DEFAULT_CURVE_BEND`); adjusted with the middle handle.
+        #[serde(default = "default_bend")]
+        bend: Pt,
     },
     Rectangle {
         rect: Rect,
@@ -108,6 +112,10 @@ pub enum Shape {
     },
 }
 
+fn default_bend() -> Pt {
+    crate::geometry::DEFAULT_CURVE_BEND
+}
+
 pub type AnnotationId = u64;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -122,6 +130,8 @@ pub struct Annotation {
 pub enum Handle {
     Start,
     End,
+    /// Curved arrow: the bend control at the curve's midpoint.
+    Mid,
     /// Bounding-box handle: `(hx, hy)` with each in {-1, 0, 1}; -1 = min
     /// side, 1 = max side, 0 = unaffected.
     Box(i8, i8),
@@ -183,10 +193,15 @@ impl Shape {
             Shape::Arrow { start, end, style } => {
                 Rect::from_points(*start, *end).expand(style.width * 2.5 + 4.0)
             }
-            Shape::CurvedArrow { start, end, style } => {
+            Shape::CurvedArrow {
+                start,
+                end,
+                style,
+                bend,
+            } => {
                 let pad = style.width * 2.8 + 5.0;
                 let base = Rect::from_points(*start, *end);
-                curved_arrow_geometry(*start, *end, style.width)
+                curved_arrow_geometry(*start, *end, style.width, *bend)
                     .and_then(|g| Rect::bounding(&g.spine_points()))
                     .map_or(base, |r| r.union(&base))
                     .expand(pad)
@@ -218,13 +233,17 @@ impl Shape {
                         .any(|t| point_in_triangle(p, t[0], t[1], t[2]))
                 })
             }
-            Shape::CurvedArrow { start, end, style } => curved_arrow_geometry(*start, *end, style.width)
-                .is_some_and(|g| {
-                    dist_to_polyline(p, &g.spine_points()) <= style.width * 0.6 + tol
-                        || g.head_triangles()
-                            .iter()
-                            .any(|t| point_in_triangle(p, t[0], t[1], t[2]))
-                }),
+            Shape::CurvedArrow {
+                start,
+                end,
+                style,
+                bend,
+            } => curved_arrow_geometry(*start, *end, style.width, *bend).is_some_and(|g| {
+                dist_to_polyline(p, &g.spine_points()) <= style.width * 0.6 + tol
+                    || g.head_triangles()
+                        .iter()
+                        .any(|t| point_in_triangle(p, t[0], t[1], t[2]))
+            }),
             Shape::Rectangle { rect, style } => {
                 let r = rect;
                 let reach = style.width * 0.5 + tol;
@@ -286,9 +305,15 @@ impl Shape {
             v
         };
         match self {
-            Shape::Arrow { start, end, .. } | Shape::CurvedArrow { start, end, .. } => {
-                vec![(Handle::Start, *start), (Handle::End, *end)]
-            }
+            Shape::Arrow { start, end, .. } => vec![(Handle::Start, *start), (Handle::End, *end)],
+            Shape::CurvedArrow { start, end, bend, .. } => vec![
+                (Handle::Start, *start),
+                (Handle::End, *end),
+                (
+                    Handle::Mid,
+                    crate::geometry::curved_arrow_mid(*start, *end, *bend),
+                ),
+            ],
             Shape::Rectangle { rect, .. } | Shape::Ellipse { rect, .. } | Shape::Pixelate { rect, .. } => {
                 box_handles(rect, true)
             }
@@ -335,6 +360,9 @@ impl Shape {
                     p
                 };
             }
+            (Shape::CurvedArrow { start, end, bend, .. }, Handle::Mid) => {
+                *bend = crate::geometry::bend_through(*start, *end, p, constrain);
+            }
             (Shape::Arrow { start, end, .. } | Shape::CurvedArrow { start, end, .. }, Handle::End) => {
                 *end = if constrain {
                     crate::geometry::snap_angle(*start, p)
@@ -376,9 +404,15 @@ impl Shape {
 
     pub fn is_finite(&self) -> bool {
         match self {
-            Shape::Arrow { start, end, style } | Shape::CurvedArrow { start, end, style } => {
+            Shape::Arrow { start, end, style } => {
                 start.is_finite() && end.is_finite() && style.width.is_finite()
             }
+            Shape::CurvedArrow {
+                start,
+                end,
+                style,
+                bend,
+            } => start.is_finite() && end.is_finite() && style.width.is_finite() && bend.is_finite(),
             Shape::Rectangle { rect, style } | Shape::Ellipse { rect, style } => {
                 rect.min.is_finite() && rect.max.is_finite() && style.width.is_finite()
             }
@@ -582,6 +616,17 @@ mod tests {
         let d: Document = serde_json::from_str(json).unwrap();
         assert!(d.annotations.is_empty());
         assert_eq!(d.source_path, None);
+    }
+
+    #[test]
+    fn curved_arrows_from_older_files_get_the_default_bend() {
+        let json = r#"{"id":1,"kind":"curved_arrow","start":{"x":0,"y":0},"end":{"x":9,"y":9},
+            "style":{"color":[255,51,108,255],"width":4.0}}"#;
+        let a: Annotation = serde_json::from_str(json).unwrap();
+        assert!(
+            matches!(a.shape, Shape::CurvedArrow { bend, .. } if bend == crate::geometry::DEFAULT_CURVE_BEND)
+        );
+        assert_eq!(a.shape.handles().len(), 3, "start, end and bend handles");
     }
 
     #[test]
