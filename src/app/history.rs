@@ -213,30 +213,40 @@ impl MarklyApp {
                         );
                     }
                     let title = e.source_name.clone().unwrap_or_else(|| "Pasted image".to_owned());
-                    p.text(
-                        rect.left_bottom() + vec2(10.0, -26.0),
-                        egui::Align2::LEFT_CENTER,
+                    let text_w = rect.width() - 20.0;
+                    // Age, right-aligned on the title row so it is never cut off.
+                    let age = p.layout_no_wrap(
+                        relative_time(e.modified_ms),
+                        egui::FontId::proportional(11.5),
+                        pal.text_muted,
+                    );
+                    let age_w = age.size().x;
+                    let title_y = rect.bottom() - 26.0;
+                    p.galley(
+                        egui::pos2(rect.right() - 10.0 - age_w, title_y - age.size().y * 0.5),
+                        age,
+                        pal.text_muted,
+                    );
+                    text_one_line(
+                        p,
+                        egui::pos2(rect.left() + 10.0, title_y),
                         title,
                         egui::FontId::proportional(13.0),
                         ui.visuals().text_color(),
+                        text_w - age_w - 8.0,
                     );
                     let anns = match e.annotations {
                         0 => String::new(),
                         1 => " · 1 mark".into(),
                         n => format!(" · {n} marks"),
                     };
-                    p.text(
+                    text_one_line(
+                        p,
                         rect.left_bottom() + vec2(10.0, -11.0),
-                        egui::Align2::LEFT_CENTER,
-                        format!(
-                            "{} × {}{} · {}",
-                            e.width,
-                            e.height,
-                            anns,
-                            relative_time(e.modified_ms)
-                        ),
+                        format!("{} × {}{}", e.width, e.height, anns),
                         egui::FontId::proportional(11.5),
                         pal.text_muted,
+                        text_w,
                     );
                     // Delete button, shown on hover.
                     let del_rect =
@@ -330,6 +340,23 @@ impl MarklyApp {
             self.open_stored(&id);
         }
     }
+}
+
+/// One line of text, left-aligned and vertically centred on `left_center`,
+/// cut with an ellipsis when wider than `max_width`.
+fn text_one_line(
+    p: &egui::Painter,
+    left_center: egui::Pos2,
+    text: String,
+    font: egui::FontId,
+    color: Color32,
+    max_width: f32,
+) {
+    let mut job = egui::text::LayoutJob::simple_singleline(text, font, color);
+    job.wrap = egui::text::TextWrapping::truncate_at_width(max_width.max(1.0));
+    let galley = p.layout_job(job);
+    let pos = left_center - vec2(0.0, galley.size().y * 0.5);
+    p.galley(pos, galley, color);
 }
 
 #[cfg(test)]
