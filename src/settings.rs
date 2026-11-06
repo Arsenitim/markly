@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 pub enum Tool {
     Select,
     Arrow,
+    CurvedArrow,
     Rectangle,
     Ellipse,
     Text,
@@ -15,9 +16,10 @@ pub enum Tool {
 }
 
 impl Tool {
-    pub const ALL: [Tool; 7] = [
+    pub const ALL: [Tool; 8] = [
         Tool::Select,
         Tool::Arrow,
+        Tool::CurvedArrow,
         Tool::Rectangle,
         Tool::Ellipse,
         Tool::Text,
@@ -29,6 +31,7 @@ impl Tool {
         match self {
             Tool::Select => "Select",
             Tool::Arrow => "Arrow",
+            Tool::CurvedArrow => "Curved arrow",
             Tool::Rectangle => "Rectangle",
             Tool::Ellipse => "Ellipse",
             Tool::Text => "Text",
@@ -42,6 +45,7 @@ impl Tool {
         match self {
             Tool::Select => "V or hold Alt",
             Tool::Arrow => "A",
+            Tool::CurvedArrow => "C",
             Tool::Rectangle => "R",
             Tool::Ellipse => "E",
             Tool::Text => "T",
@@ -72,6 +76,7 @@ impl Default for ToolStyle {
 #[serde(default)]
 pub struct ToolStyles {
     pub arrow: ToolStyle,
+    pub curved_arrow: ToolStyle,
     pub rectangle: ToolStyle,
     pub ellipse: ToolStyle,
     pub text: ToolStyle,
@@ -84,6 +89,7 @@ impl ToolStyles {
         Some(match t {
             Tool::Select => return None,
             Tool::Arrow => self.arrow,
+            Tool::CurvedArrow => self.curved_arrow,
             Tool::Rectangle => self.rectangle,
             Tool::Ellipse => self.ellipse,
             Tool::Text => self.text,
@@ -96,6 +102,7 @@ impl ToolStyles {
         Some(match t {
             Tool::Select => return None,
             Tool::Arrow => &mut self.arrow,
+            Tool::CurvedArrow => &mut self.curved_arrow,
             Tool::Rectangle => &mut self.rectangle,
             Tool::Ellipse => &mut self.ellipse,
             Tool::Text => &mut self.text,

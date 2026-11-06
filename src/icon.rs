@@ -18,9 +18,9 @@ pub const MARGIN_DEFAULT: f32 = 0.047;
 /// Apple's icon grid leaves ~10 % around the body.
 pub const MARGIN_MACOS: f32 = 0.098;
 
-// Pink around #F92672, lighter at the top.
-const TOP: [u8; 3] = [255, 84, 146];
-const BOTTOM: [u8; 3] = [234, 22, 98];
+// Pink around #FF336C (the default annotation colour), lighter at the top.
+const TOP: [u8; 3] = [255, 92, 140];
+const BOTTOM: [u8; 3] = [240, 30, 94];
 
 struct Geometry {
     body: Rect,

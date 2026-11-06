@@ -70,6 +70,11 @@ pub fn draw_shape(pixmap: &mut Pixmap, shape: &Shape, t: Transform) {
                 pixmap.fill_path(&path, &paint(style.color), FillRule::Winding, t, None);
             }
         }
+        Shape::CurvedArrow { start, end, style } => {
+            if let Some(path) = curved_arrow_path(*start, *end, style.width) {
+                pixmap.fill_path(&path, &paint(style.color), FillRule::Winding, t, None);
+            }
+        }
         Shape::Rectangle { rect, style } => {
             let r = rect_corner_radius(rect, style.width);
             if let Some(path) = rounded_rect_path(rect, r) {
@@ -129,6 +134,24 @@ fn draw_polyline(pixmap: &mut Pixmap, pts: &[Pt], width: f32, color: Rgba, t: Tr
 /// Single path for an arrow. Every sub-polygon is emitted with the same
 /// orientation so the non-zero fill is a true union (no holes where the
 /// shaft runs under the head).
+/// Curved arrow: tapered shaft outline + swept head (+ round tail tip), all
+/// with the same orientation so the non-zero fill is a union.
+pub fn curved_arrow_path(start: Pt, end: Pt, width: f32) -> Option<Path> {
+    let g = crate::geometry::curved_arrow_geometry(start, end, width)?;
+    let mut pb = PathBuilder::new();
+    push_polygon(&mut pb, &g.shaft_outline());
+    push_polygon(&mut pb, &g.head);
+    let (tail, _, r) = g.spine[0];
+    let cap: Vec<Pt> = (0..16)
+        .map(|i| {
+            let a = i as f32 / 16.0 * std::f32::consts::TAU;
+            tail + Pt::new(a.cos(), a.sin()) * r
+        })
+        .collect();
+    push_polygon(&mut pb, &cap);
+    pb.finish()
+}
+
 pub fn arrow_path(start: Pt, end: Pt, width: f32) -> Option<Path> {
     let g = arrow_geometry(start, end, width)?;
     let mut pb = PathBuilder::new();
@@ -533,7 +556,7 @@ mod tests {
         let d = doc_with(Shape::Text {
             pos: Pt::new(5.0, 5.0),
             text: "Hi!".into(),
-            color: PALETTE[6].1,
+            color: PALETTE[7].1,
             size: 32.0,
         });
         let out = flatten(&img, &d.annotations);

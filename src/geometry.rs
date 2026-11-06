@@ -357,6 +357,87 @@ pub fn arrow_geometry(start: Pt, end: Pt, width: f32) -> Option<ArrowGeometry> {
     })
 }
 
+/// The "curved" arrow: a gently bowed, tapered shaft (thin tail, thick
+/// near the head) ending in a large swept-back head that follows the
+/// curve's direction.
+#[derive(Clone, Debug, PartialEq)]
+pub struct CurvedArrowGeometry {
+    /// Shaft centre line samples: (point, unit normal, half width).
+    pub spine: Vec<(Pt, Pt, f32)>,
+    /// tip, left barb, notch, right barb.
+    pub head: [Pt; 4],
+}
+
+impl CurvedArrowGeometry {
+    pub fn head_triangles(&self) -> [[Pt; 3]; 2] {
+        let [tip, l, notch, r] = self.head;
+        [[tip, l, notch], [tip, notch, r]]
+    }
+
+    /// Closed outline of the shaft: left edge forward, right edge back.
+    pub fn shaft_outline(&self) -> Vec<Pt> {
+        let left = self.spine.iter().map(|(p, n, h)| *p + *n * *h);
+        let right = self.spine.iter().rev().map(|(p, n, h)| *p - *n * *h);
+        left.chain(right).collect()
+    }
+
+    pub fn spine_points(&self) -> Vec<Pt> {
+        self.spine.iter().map(|(p, _, _)| *p).collect()
+    }
+}
+
+/// How far the shaft bows sideways, as a fraction of the arrow length.
+const CURVE_BEND: f32 = 0.10;
+
+pub fn curved_arrow_geometry(start: Pt, end: Pt, width: f32) -> Option<CurvedArrowGeometry> {
+    let v = end - start;
+    let len = v.len();
+    if len < 1.0e-3 || !len.is_finite() {
+        return None;
+    }
+    let w = width.max(0.5);
+    // Quadratic Bézier start → end, control point pushed to one side.
+    let ctrl = (start + end) * 0.5 + v.normalized().perp() * (len * CURVE_BEND);
+    let at = |t: f32| {
+        let u = 1.0 - t;
+        start * (u * u) + ctrl * (2.0 * u * t) + end * (t * t)
+    };
+    let tangent = |t: f32| ((ctrl - start) * (1.0 - t) + (end - ctrl) * t).normalized();
+
+    let head_len = (w * 5.2 + 10.0).min(len * 0.6);
+    let head_half = head_len * 0.62;
+    let dir = tangent(1.0);
+    let n = dir.perp();
+    let back = end - dir * head_len;
+    let notch = end - dir * (head_len * 0.72);
+
+    // Shaft runs from the tail until it is safely inside the head.
+    let stop = head_len * 0.6;
+    let steps = 48;
+    let mut spine = Vec::with_capacity(steps + 1);
+    let tail_half = (w * 0.18).max(0.3);
+    let base_half = (w * 1.0).min(head_half * 0.42).max(tail_half);
+    let mut t_stop = 1.0;
+    for i in 0..=steps {
+        let t = i as f32 / steps as f32;
+        if at(t).dist(end) <= stop {
+            t_stop = t;
+            break;
+        }
+    }
+    for i in 0..=steps {
+        let t = t_stop * i as f32 / steps as f32;
+        let k = t / t_stop.max(1e-6);
+        // Ease-out taper: widens quickly, then evens out towards the head.
+        let half = tail_half + (base_half - tail_half) * (1.0 - (1.0 - k) * (1.0 - k));
+        spine.push((at(t), tangent(t).perp(), half));
+    }
+    Some(CurvedArrowGeometry {
+        spine,
+        head: [end, back + n * head_half, notch, back - n * head_half],
+    })
+}
+
 /// Snap `end` so the vector from `start` is a multiple of 15°.
 pub fn snap_angle(start: Pt, end: Pt) -> Pt {
     let v = end - start;
@@ -538,6 +619,20 @@ mod tests {
         let g = arrow_geometry(Pt::new(0.0, 0.0), Pt::new(10.0, 0.0), 6.0).unwrap();
         assert!(g.head[1].x >= 3.49);
         assert!(arrow_geometry(Pt::new(1.0, 1.0), Pt::new(1.0, 1.0), 4.0).is_none());
+    }
+
+    #[test]
+    fn curved_arrow_tapers_and_bows() {
+        let g = curved_arrow_geometry(Pt::new(0.0, 0.0), Pt::new(300.0, 0.0), 8.0).unwrap();
+        let first = g.spine.first().unwrap();
+        let last = g.spine.last().unwrap();
+        assert!(first.2 < last.2, "shaft gets thicker towards the head");
+        // The middle of the shaft is pushed to one side of the straight line.
+        let mid = g.spine[g.spine.len() / 2].0;
+        assert!(mid.y.abs() > 10.0, "bowed: {mid:?}");
+        assert!(approx(g.head[0], Pt::new(300.0, 0.0)));
+        assert_eq!(g.shaft_outline().len(), g.spine.len() * 2);
+        assert!(curved_arrow_geometry(Pt::ZERO, Pt::ZERO, 4.0).is_none());
     }
 
     #[test]

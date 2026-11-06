@@ -168,6 +168,7 @@ fn cmd() -> &'static str {
 fn tool_for(shape: &Shape) -> Tool {
     match shape {
         Shape::Arrow { .. } => Tool::Arrow,
+        Shape::CurvedArrow { .. } => Tool::CurvedArrow,
         Shape::Rectangle { .. } => Tool::Rectangle,
         Shape::Ellipse { .. } => Tool::Ellipse,
         Shape::Text { .. } => Tool::Text,
@@ -187,6 +188,7 @@ fn presets_for(tool: Tool) -> &'static [f32; 5] {
 fn shape_size(shape: &Shape) -> f32 {
     match shape {
         Shape::Arrow { style, .. }
+        | Shape::CurvedArrow { style, .. }
         | Shape::Rectangle { style, .. }
         | Shape::Ellipse { style, .. }
         | Shape::Freehand { style, .. } => style.width,
@@ -985,6 +987,7 @@ impl MarklyApp {
         let tool_keys = [
             (Key::V, Tool::Select),
             (Key::A, Tool::Arrow),
+            (Key::C, Tool::CurvedArrow),
             (Key::R, Tool::Rectangle),
             (Key::E, Tool::Ellipse),
             (Key::T, Tool::Text),
@@ -1116,7 +1119,7 @@ impl eframe::App for MarklyApp {
             .frame(bar_frame)
             .show(ui, |ui| self.top_bar(ui, &pal));
         egui::Panel::left("markly-tools")
-            .exact_size(58.0)
+            .exact_size(64.0)
             .resizable(false)
             .frame(
                 egui::Frame::new()

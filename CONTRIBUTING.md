@@ -47,7 +47,7 @@ what the tests exercise.
 | `cargo run --example make_icons` | Regenerate `assets/icons/` (SVG, PNG, Windows `.ico`, macOS iconset) after changing `src/icon.rs` |
 
 Script coordinates are logical window points (the top bar is 46 pt tall and
-the tool rail 58 pt wide). Example end-to-end check:
+the tool rail 64 pt wide). Example end-to-end check:
 
 ```text
 wait 10

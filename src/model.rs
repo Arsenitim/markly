@@ -2,8 +2,8 @@
 //! coordinates. Contains no GUI or rendering-backend types.
 
 use crate::geometry::{
-    Pt, Rect, arrow_geometry, dist_to_polyline, dist_to_segment, ellipse_points, point_in_triangle,
-    square_from,
+    Pt, Rect, arrow_geometry, curved_arrow_geometry, dist_to_polyline, dist_to_segment, ellipse_points,
+    point_in_triangle, square_from,
 };
 use serde::{Deserialize, Serialize};
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -34,7 +34,9 @@ impl Rgba {
 }
 
 /// The curated palette.
-pub const PALETTE: [(&str, Rgba); 8] = [
+/// The first entry is the default colour for every tool.
+pub const PALETTE: [(&str, Rgba); 9] = [
+    ("Pink", Rgba::rgb(255, 51, 108)),
     ("Red", Rgba::rgb(234, 59, 49)),
     ("Orange", Rgba::rgb(246, 138, 28)),
     ("Yellow", Rgba::rgb(250, 204, 21)),
@@ -69,6 +71,12 @@ pub struct Style {
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum Shape {
     Arrow {
+        start: Pt,
+        end: Pt,
+        style: Style,
+    },
+    /// Bowed, tapered arrow with a large head (see `curved_arrow_geometry`).
+    CurvedArrow {
         start: Pt,
         end: Pt,
         style: Style,
@@ -123,6 +131,7 @@ impl Shape {
     pub fn kind_name(&self) -> &'static str {
         match self {
             Shape::Arrow { .. } => "arrow",
+            Shape::CurvedArrow { .. } => "curved_arrow",
             Shape::Rectangle { .. } => "rectangle",
             Shape::Ellipse { .. } => "ellipse",
             Shape::Text { .. } => "text",
@@ -134,6 +143,7 @@ impl Shape {
     pub fn color(&self) -> Option<Rgba> {
         match self {
             Shape::Arrow { style, .. }
+            | Shape::CurvedArrow { style, .. }
             | Shape::Rectangle { style, .. }
             | Shape::Ellipse { style, .. }
             | Shape::Freehand { style, .. } => Some(style.color),
@@ -145,6 +155,7 @@ impl Shape {
     pub fn set_color(&mut self, c: Rgba) {
         match self {
             Shape::Arrow { style, .. }
+            | Shape::CurvedArrow { style, .. }
             | Shape::Rectangle { style, .. }
             | Shape::Ellipse { style, .. }
             | Shape::Freehand { style, .. } => style.color = c,
@@ -157,6 +168,7 @@ impl Shape {
     pub fn set_size(&mut self, v: f32) {
         match self {
             Shape::Arrow { style, .. }
+            | Shape::CurvedArrow { style, .. }
             | Shape::Rectangle { style, .. }
             | Shape::Ellipse { style, .. }
             | Shape::Freehand { style, .. } => style.width = v,
@@ -170,6 +182,14 @@ impl Shape {
         match self {
             Shape::Arrow { start, end, style } => {
                 Rect::from_points(*start, *end).expand(style.width * 2.5 + 4.0)
+            }
+            Shape::CurvedArrow { start, end, style } => {
+                let pad = style.width * 2.8 + 5.0;
+                let base = Rect::from_points(*start, *end);
+                curved_arrow_geometry(*start, *end, style.width)
+                    .and_then(|g| Rect::bounding(&g.spine_points()))
+                    .map_or(base, |r| r.union(&base))
+                    .expand(pad)
             }
             Shape::Rectangle { rect, style } | Shape::Ellipse { rect, style } => {
                 rect.expand(style.width * 0.5)
@@ -198,6 +218,13 @@ impl Shape {
                         .any(|t| point_in_triangle(p, t[0], t[1], t[2]))
                 })
             }
+            Shape::CurvedArrow { start, end, style } => curved_arrow_geometry(*start, *end, style.width)
+                .is_some_and(|g| {
+                    dist_to_polyline(p, &g.spine_points()) <= style.width * 0.6 + tol
+                        || g.head_triangles()
+                            .iter()
+                            .any(|t| point_in_triangle(p, t[0], t[1], t[2]))
+                }),
             Shape::Rectangle { rect, style } => {
                 let r = rect;
                 let reach = style.width * 0.5 + tol;
@@ -222,7 +249,7 @@ impl Shape {
 
     pub fn translate(&mut self, d: Pt) {
         match self {
-            Shape::Arrow { start, end, .. } => {
+            Shape::Arrow { start, end, .. } | Shape::CurvedArrow { start, end, .. } => {
                 *start = *start + d;
                 *end = *end + d;
             }
@@ -259,7 +286,9 @@ impl Shape {
             v
         };
         match self {
-            Shape::Arrow { start, end, .. } => vec![(Handle::Start, *start), (Handle::End, *end)],
+            Shape::Arrow { start, end, .. } | Shape::CurvedArrow { start, end, .. } => {
+                vec![(Handle::Start, *start), (Handle::End, *end)]
+            }
             Shape::Rectangle { rect, .. } | Shape::Ellipse { rect, .. } | Shape::Pixelate { rect, .. } => {
                 box_handles(rect, true)
             }
@@ -299,14 +328,14 @@ impl Shape {
             Rect::from_points(min, max)
         };
         match (&mut s, handle) {
-            (Shape::Arrow { start, end, .. }, Handle::Start) => {
+            (Shape::Arrow { start, end, .. } | Shape::CurvedArrow { start, end, .. }, Handle::Start) => {
                 *start = if constrain {
                     crate::geometry::snap_angle(*end, p)
                 } else {
                     p
                 };
             }
-            (Shape::Arrow { start, end, .. }, Handle::End) => {
+            (Shape::Arrow { start, end, .. } | Shape::CurvedArrow { start, end, .. }, Handle::End) => {
                 *end = if constrain {
                     crate::geometry::snap_angle(*start, p)
                 } else {
@@ -336,7 +365,7 @@ impl Shape {
     /// Too small to be intentional (e.g. a click with a drawing tool).
     pub fn is_degenerate(&self) -> bool {
         match self {
-            Shape::Arrow { start, end, .. } => start.dist(*end) < 3.0,
+            Shape::Arrow { start, end, .. } | Shape::CurvedArrow { start, end, .. } => start.dist(*end) < 3.0,
             Shape::Rectangle { rect, .. } | Shape::Ellipse { rect, .. } | Shape::Pixelate { rect, .. } => {
                 rect.width() < 2.0 || rect.height() < 2.0
             }
@@ -347,7 +376,7 @@ impl Shape {
 
     pub fn is_finite(&self) -> bool {
         match self {
-            Shape::Arrow { start, end, style } => {
+            Shape::Arrow { start, end, style } | Shape::CurvedArrow { start, end, style } => {
                 start.is_finite() && end.is_finite() && style.width.is_finite()
             }
             Shape::Rectangle { rect, style } | Shape::Ellipse { rect, style } => {

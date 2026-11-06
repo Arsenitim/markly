@@ -118,18 +118,23 @@ fn main() {
         end: p(560.0, 250.0),
         style: st(red, 5.5),
     });
-    doc.add(Shape::Arrow {
+    doc.add(Shape::CurvedArrow {
         start: p(1120.0, 600.0),
         end: p(1350.0, 330.0),
         style: st(red, 5.5),
     });
+    doc.add(Shape::CurvedArrow {
+        start: p(300.0, 960.0),
+        end: p(320.0, 880.0),
+        style: st(red, 3.5),
+    });
     doc.add(Shape::Rectangle {
         rect: Rect::from_points(p(290.0, 90.0), p(690.0, 330.0)),
-        style: st(PALETTE[4].1, 5.5),
+        style: st(PALETTE[5].1, 5.5),
     });
     doc.add(Shape::Ellipse {
         rect: Rect::from_points(p(1140.0, 300.0), p(1560.0, 340.0)),
-        style: st(PALETTE[3].1, 3.5),
+        style: st(PALETTE[4].1, 3.5),
     });
     let pts: Vec<Pt> = (0..80)
         .map(|i| {
@@ -139,7 +144,7 @@ fn main() {
         .collect();
     doc.add(Shape::Freehand {
         points: markly::geometry::smooth_stroke(&pts, 4.0),
-        style: st(PALETTE[1].1, 5.5),
+        style: st(PALETTE[2].1, 5.5),
     });
     let tsize = TEXT_SIZES[2] * unit;
     doc.add(Shape::Text {

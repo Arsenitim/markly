@@ -7,6 +7,7 @@ use eframe::egui::{self, Color32, CornerRadius, Painter, Pos2, Rect, Shape, Stro
 pub enum Icon {
     Select,
     Arrow,
+    CurvedArrow,
     Rectangle,
     Ellipse,
     Text,
@@ -83,6 +84,29 @@ pub fn paint(p: &Painter, rect: Rect, icon: Icon, color: Color32) {
         Icon::Arrow => {
             line(&[(5.0, 19.0), (15.0, 9.0)]);
             fill_poly(&[(19.5, 4.5), (17.6, 12.6), (11.4, 6.4)]);
+        }
+        Icon::CurvedArrow => {
+            // Bowed, tapered shaft drawn as segments of growing width.
+            let pts: Vec<(f32, f32)> = (0..=12)
+                .map(|i| {
+                    let t = i as f32 / 12.0;
+                    let (sx, sy, cx, cy, ex, ey) = (4.5, 19.5, 6.0, 9.0, 14.5, 9.5);
+                    let u = 1.0 - t;
+                    (
+                        u * u * sx + 2.0 * u * t * cx + t * t * ex,
+                        u * u * sy + 2.0 * u * t * cy + t * t * ey,
+                    )
+                })
+                .collect();
+            for (i, w2) in pts.windows(2).enumerate() {
+                let k = 0.45 + 0.75 * i as f32 / 11.0;
+                p.line_segment(
+                    [at(w2[0].0, w2[0].1), at(w2[1].0, w2[1].1)],
+                    Stroke::new(w * k, color),
+                );
+            }
+            fill_poly(&[(20.0, 9.0), (13.0, 4.2), (14.6, 9.4)]);
+            fill_poly(&[(20.0, 9.0), (14.6, 9.4), (13.0, 14.0)]);
         }
         Icon::Rectangle => rrect(4.0, 6.0, 20.0, 18.0, 2.5),
         Icon::Ellipse => {

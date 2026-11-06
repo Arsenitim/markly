@@ -15,7 +15,7 @@ remembered automatically, even if you never save it.
 
 - **Paste** an image (Ctrl/⌘+V), **open** a file, **drag & drop**, or pass a
   file on the command line. PNG, JPEG and WebP.
-- **Annotate** with arrows, rounded rectangles, ellipses, multi-line text,
+- **Annotate** with clean straight arrows or bold curved arrows, rounded rectangles, ellipses, multi-line text,
   smooth freehand strokes and **pixelation** that really destroys the
   underlying pixels.
 - Every annotation stays **editable**: select, move, resize with handles,
@@ -26,6 +26,7 @@ remembered automatically, even if you never save it.
 - **Automatic local history.** Every pasted or opened image becomes a working
   document that is autosaved and restored on the next launch. A history
   panel with thumbnails lets you reopen or delete earlier documents.
+- A small curated palette; the signature pink (`#FF336C`) is the default for every tool.
 - Light and dark themes (follows the system by default).
 
 What it deliberately does *not* do: no screen capture, no cloud, no accounts,
@@ -50,7 +51,7 @@ no web view.
 | Pan | Scroll, drag empty space with Select, middle-drag, or Space+drag |
 | Select/move temporarily | hold Alt (with any drawing tool): click to select, drag to move or resize, release to keep drawing. Pressing Alt while typing a label finishes it (an empty one is discarded) |
 | Nudge selection | Arrow keys (Shift = 10 px) |
-| Tools | V select (or hold Alt) · A arrow · R rectangle · E ellipse · T text · P pen · X pixelate |
+| Tools | V select (or hold Alt) · A arrow · C curved arrow · R rectangle · E ellipse · T text · P pen · X pixelate |
 | Toggle history | H |
 | Constrain (15° arrows, squares, circles) | hold Shift while drawing/resizing |
 

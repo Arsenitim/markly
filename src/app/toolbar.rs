@@ -251,6 +251,7 @@ impl MarklyApp {
                 let icon = match tool {
                     Tool::Select => Icon::Select,
                     Tool::Arrow => Icon::Arrow,
+                    Tool::CurvedArrow => Icon::CurvedArrow,
                     Tool::Rectangle => Icon::Rectangle,
                     Tool::Ellipse => Icon::Ellipse,
                     Tool::Text => Icon::Text,
@@ -269,26 +270,27 @@ impl MarklyApp {
             if target.has_color() {
                 separator_h(ui, pal);
                 let mut picked = None;
-                for row in PALETTE.chunks(2).enumerate() {
+                // 3×3 grid of swatches.
+                for row in PALETTE.chunks(3).enumerate() {
                     ui.horizontal(|ui| {
-                        ui.spacing_mut().item_spacing.x = 4.0;
-                        ui.add_space(4.0);
+                        ui.spacing_mut().item_spacing.x = 1.0;
+                        ui.add_space(((ui.available_width() - 59.0) * 0.5).max(0.0));
                         for (j, (name, c)) in row.1.iter().enumerate() {
-                            let idx = row.0 * 2 + j;
-                            let (rect, resp) = ui.allocate_exact_size(vec2(22.0, 22.0), Sense::click());
+                            let idx = row.0 * 3 + j;
+                            let (rect, resp) = ui.allocate_exact_size(vec2(19.0, 19.0), Sense::click());
                             let color = rgba_to_color32(*c);
                             let p = ui.painter();
                             let selected = style.color == idx;
                             if selected {
-                                p.circle_stroke(rect.center(), 10.5, Stroke::new(2.0, ACCENT));
+                                p.circle_stroke(rect.center(), 8.8, Stroke::new(1.8, ACCENT));
                             } else if resp.hovered() {
-                                p.circle_stroke(rect.center(), 10.5, Stroke::new(1.5, pal.separator));
+                                p.circle_stroke(rect.center(), 8.8, Stroke::new(1.4, pal.separator));
                             }
-                            p.circle_filled(rect.center(), 7.5, color);
+                            p.circle_filled(rect.center(), 6.3, color);
                             // Keep light/dark swatches visible on any panel.
                             p.circle_stroke(
                                 rect.center(),
-                                7.5,
+                                6.3,
                                 Stroke::new(1.0, Color32::from_black_alpha(40)),
                             );
                             if resp.on_hover_text(*name).clicked() {

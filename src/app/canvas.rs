@@ -6,7 +6,8 @@
 use super::theme::{ACCENT, Palette};
 use super::{MarklyApp, OpenDoc, PixelCacheEntry, TextEditing, cmd, icons, rgba_to_color32};
 use crate::geometry::{
-    Pt, Rect, ViewTransform, arrow_geometry, rect_corner_radius, smooth_stroke, snap_angle, square_from,
+    Pt, Rect, ViewTransform, arrow_geometry, curved_arrow_geometry, rect_corner_radius, smooth_stroke,
+    snap_angle, square_from,
 };
 use crate::model::{Annotation, AnnotationId, Handle, Shape, Style};
 use crate::render::{halo_radius, pixel_grid};
@@ -407,12 +408,17 @@ impl MarklyApp {
                     before,
                 });
             }
-            Tool::Arrow | Tool::Rectangle | Tool::Ellipse | Tool::Pixelate => {
+            Tool::Arrow | Tool::CurvedArrow | Tool::Rectangle | Tool::Ellipse | Tool::Pixelate => {
                 let (color, size) = self.new_style(tool);
                 let style = Style { color, width: size };
                 let r = Rect::from_points(ip, ip);
                 let shape = match tool {
                     Tool::Arrow => Shape::Arrow {
+                        start: ip,
+                        end: ip,
+                        style,
+                    },
+                    Tool::CurvedArrow => Shape::CurvedArrow {
                         start: ip,
                         end: ip,
                         style,
@@ -621,7 +627,9 @@ fn handle_cursor(h: Handle) -> CursorIcon {
 
 fn update_created(shape: &mut Shape, origin: Pt, p: Pt, constrain: bool) {
     match shape {
-        Shape::Arrow { end, .. } => *end = if constrain { snap_angle(origin, p) } else { p },
+        Shape::Arrow { end, .. } | Shape::CurvedArrow { end, .. } => {
+            *end = if constrain { snap_angle(origin, p) } else { p }
+        }
         Shape::Rectangle { rect, .. } | Shape::Ellipse { rect, .. } | Shape::Pixelate { rect, .. } => {
             let q = if constrain { square_from(origin, p) } else { p };
             *rect = Rect::from_points(origin, q);
@@ -733,6 +741,45 @@ pub(super) fn paint_shape(painter: &Painter, view: &ViewTransform, shape: &Shape
     let z = view.zoom;
     let sp = |p: Pt| to_pos(view.image_to_screen(p));
     match shape {
+        Shape::CurvedArrow { start, end, style } => {
+            let Some(g) = curved_arrow_geometry(*start, *end, style.width) else {
+                return;
+            };
+            let c = rgba_to_color32(style.color);
+            // The bowed shaft is concave, which egui's polygon fill can't do:
+            // build an antialiased triangle strip (1 physical-pixel feather).
+            let feather = 1.0 / view.pixels_per_point;
+            let mut mesh = egui::Mesh::default();
+            let clear = Color32::TRANSPARENT;
+            for (i, (p, n, h)) in g.spine.iter().enumerate() {
+                let (p, hw) = (sp(*p), (h * z).max(0.25));
+                let n = egui::vec2(n.x, n.y);
+                let inner = (hw - feather * 0.5).max(0.0);
+                let outer = hw + feather * 0.5;
+                mesh.colored_vertex(p + n * outer, clear);
+                mesh.colored_vertex(p + n * inner, c);
+                mesh.colored_vertex(p - n * inner, c);
+                mesh.colored_vertex(p - n * outer, clear);
+                if i > 0 {
+                    let b = (i as u32 - 1) * 4;
+                    let a = i as u32 * 4;
+                    for k in 0..3 {
+                        mesh.add_triangle(b + k, b + k + 1, a + k);
+                        mesh.add_triangle(b + k + 1, a + k + 1, a + k);
+                    }
+                }
+            }
+            painter.add(mesh);
+            let (tail, _, r) = g.spine[0];
+            painter.circle_filled(sp(tail), r * z, c);
+            for t in g.head_triangles() {
+                painter.add(egui::Shape::convex_polygon(
+                    t.iter().map(|p| sp(*p)).collect(),
+                    c,
+                    Stroke::NONE,
+                ));
+            }
+        }
         Shape::Arrow { start, end, style } => {
             let Some(g) = arrow_geometry(*start, *end, style.width) else {
                 return;
@@ -822,7 +869,7 @@ pub(super) fn paint_shape(painter: &Painter, view: &ViewTransform, shape: &Shape
 fn paint_selection(painter: &Painter, view: &ViewTransform, shape: &Shape) {
     let handle_stroke = Stroke::new(1.5, ACCENT);
     match shape {
-        Shape::Arrow { .. } => {}
+        Shape::Arrow { .. } | Shape::CurvedArrow { .. } => {}
         _ => {
             let r = to_rect(view.image_rect_to_screen(shape.bounds())).expand(
                 if matches!(shape, Shape::Text { .. }) {
