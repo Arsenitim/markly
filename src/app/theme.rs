@@ -3,7 +3,8 @@
 use crate::settings::ThemePref;
 use eframe::egui::{self, Color32, CornerRadius, Stroke, Theme, ThemePreference};
 
-pub const ACCENT: Color32 = Color32::from_rgb(92, 104, 245);
+/// Brand pink, the same as the default annotation colour (#FF336C).
+pub const ACCENT: Color32 = Color32::from_rgb(255, 51, 108);
 
 /// Colours not covered by egui's `Visuals`.
 #[derive(Clone, Copy)]

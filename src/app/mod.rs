@@ -1258,7 +1258,27 @@ fn install_fonts(ctx: &egui::Context) {
     fonts
         .families
         .insert(egui::FontFamily::Name(text::EGUI_FONT_NAME.into()), family);
+    add_system_symbol_fallback(&mut fonts);
     ctx.set_fonts(fonts);
+}
+
+/// Neither egui's bundled fonts nor Noto Sans have the macOS key symbols
+/// (⌘ ⌥ ⇧ ⌃), which then render as tofu boxes. Append Apple Symbols, which
+/// ships with every macOS, as a last-resort fallback for UI text.
+fn add_system_symbol_fallback(fonts: &mut egui::FontDefinitions) {
+    if !cfg!(target_os = "macos") {
+        return;
+    }
+    const NAME: &str = "system-symbols";
+    let Ok(bytes) = std::fs::read("/System/Library/Fonts/Apple Symbols.ttf") else {
+        return;
+    };
+    fonts
+        .font_data
+        .insert(NAME.to_owned(), Arc::new(egui::FontData::from_owned(bytes)));
+    for family in fonts.families.values_mut() {
+        family.push(NAME.to_owned());
+    }
 }
 
 fn file_label(p: &Path) -> String {

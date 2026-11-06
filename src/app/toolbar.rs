@@ -282,7 +282,12 @@ impl MarklyApp {
                             let p = ui.painter();
                             let selected = style.color == idx;
                             if selected {
-                                p.circle_stroke(rect.center(), 8.8, Stroke::new(1.8, ACCENT));
+                                // Neutral ring: a pink ring would blur into the pink/red swatches.
+                                p.circle_stroke(
+                                    rect.center(),
+                                    8.8,
+                                    Stroke::new(1.8, ui.visuals().strong_text_color()),
+                                );
                             } else if resp.hovered() {
                                 p.circle_stroke(rect.center(), 8.8, Stroke::new(1.4, pal.separator));
                             }
