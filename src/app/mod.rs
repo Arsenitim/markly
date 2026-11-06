@@ -470,9 +470,6 @@ impl MarklyApp {
         {
             eprintln!("markly: timed out flushing autosave");
         }
-        if let Some(store) = &self.store {
-            self.clip.handoff_on_exit(store.root(), Duration::from_secs(2));
-        }
         if self.trace {
             eprintln!(
                 "[markly] shutdown took {:.1} ms",
@@ -559,6 +556,19 @@ impl MarklyApp {
                 self.selection = None;
             }
             self.persist_settings();
+        }
+    }
+
+    /// The tool that pointer input uses right now: holding Alt temporarily
+    /// switches to Select (not while typing text or mid-drag with another
+    /// tool), so annotations can be picked and moved without leaving the
+    /// current drawing tool.
+    fn effective_tool(&self) -> Tool {
+        let alt = self.ctx.input(|i| i.modifiers.alt);
+        if alt && self.editing.is_none() {
+            Tool::Select
+        } else {
+            self.tool
         }
     }
 

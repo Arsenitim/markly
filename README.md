@@ -48,8 +48,9 @@ no web view.
 | Fit image / Actual size (1:1) | Cmd+0 / Cmd+1 |
 | Zoom in / out | Cmd+= / Cmd+−, or Cmd+mouse wheel, or pinch |
 | Pan | Scroll, drag empty space with Select, middle-drag, or Space+drag |
+| Select/move temporarily | hold Alt (with any drawing tool): click to select, drag to move or resize, release to keep drawing |
 | Nudge selection | Arrow keys (Shift = 10 px) |
-| Tools | V select · A arrow · R rectangle · E ellipse · T text · P pen · X pixelate |
+| Tools | V select (or hold Alt) · A arrow · R rectangle · E ellipse · T text · P pen · X pixelate |
 | Toggle history | H |
 | Constrain (15° arrows, squares, circles) | hold Shift while drawing/resizing |
 
@@ -96,13 +97,12 @@ Nothing ever leaves your computer.
 
 ## Clipboard notes and platform limitations
 
-- **Linux (X11 and Wayland):** clipboard content belongs to the process
-  that set it and normally vanishes when that process exits. If your copied
-  image is still on the clipboard when Markly closes, Markly starts a tiny
-  helper (`markly --hold-clipboard`) that keeps serving that one image **until
-  something else is copied, then exits**. It is not a daemon and never runs
-  otherwise. A clipboard manager, if you use one, makes the helper redundant
-  but harmless.
+- **Linux (X11 and Wayland): paste before you quit.** The clipboard is served
+  by the application that copied, so an image copied from Markly disappears
+  from the clipboard when Markly closes (unless a clipboard manager such as
+  Klipper, CopyQ or a GNOME clipboard extension has kept a copy). This is a
+  deliberate simplification: no helper process stays behind. Windows and
+  macOS keep the copied image after Markly quits.
 - On Wayland, Markly uses the `wlr/ext-data-control` protocol when the
   compositor offers it, and otherwise the X11 clipboard through XWayland.
   Verified on GNOME 50 (Wayland) only; see [docs/QA_CHECKLIST.md](docs/QA_CHECKLIST.md).

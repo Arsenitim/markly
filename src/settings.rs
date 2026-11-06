@@ -40,7 +40,7 @@ impl Tool {
     /// Single-key shortcut (when not editing text).
     pub fn key_hint(self) -> &'static str {
         match self {
-            Tool::Select => "V",
+            Tool::Select => "V or hold Alt",
             Tool::Arrow => "A",
             Tool::Rectangle => "R",
             Tool::Ellipse => "E",

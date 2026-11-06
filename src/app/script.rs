@@ -12,6 +12,8 @@
 //! text Hello world        # typed text
 //! copy                    # clipboard shortcut events
 //! paste
+//! hold alt                # keep modifiers pressed for following steps
+//! release
 //! wheel 0 3 cmd           # scroll lines (with Ctrl/Cmd: zoom)
 //! screenshot /tmp/x.png
 //! quit
@@ -24,6 +26,7 @@ use std::path::PathBuf;
 pub(super) enum Step {
     Wait,
     Events(Vec<Event>, Modifiers),
+    Hold(Modifiers),
     Screenshot(PathBuf),
     Quit,
 }
@@ -32,6 +35,8 @@ pub(super) enum Step {
 pub(super) struct Script {
     steps: VecDeque<Step>,
     pointer: Pos2,
+    /// Modifiers held across steps (`hold alt` … `release`).
+    held: Modifiers,
 }
 
 fn parse_mods(words: &[&str]) -> Modifiers {
@@ -111,6 +116,8 @@ impl Script {
                     };
                     s.steps.push_back(Step::Events(vec![ev], m));
                 }
+                "hold" => s.steps.push_back(Step::Hold(parse_mods(&words[1..]))),
+                "release" => s.steps.push_back(Step::Hold(Modifiers::NONE)),
                 "copy" => s
                     .steps
                     .push_back(Step::Events(vec![Event::Copy], Modifiers::COMMAND)),
@@ -151,12 +158,18 @@ impl Script {
         let step = self.steps.pop_front()?;
         ctx.request_repaint();
         match step {
+            Step::Hold(m) => {
+                self.held = m;
+                raw.events.push(Event::ModifiersChanged(m));
+                None
+            }
             Step::Events(events, mods) => {
+                let mods = mods | self.held;
                 raw.events.push(Event::ModifiersChanged(mods));
                 raw.events.extend(events);
-                if mods != Modifiers::NONE {
+                if mods != self.held {
                     // Release modifiers on the next step.
-                    self.steps.push_front(Step::Events(Vec::new(), Modifiers::NONE));
+                    self.steps.push_front(Step::Events(Vec::new(), self.held));
                 }
                 None
             }

@@ -7,8 +7,8 @@ small and obvious.
 Non-negotiables:
 
 - No networking, telemetry, accounts or cloud features.
-- No background services, tray icons or daemons. The Linux clipboard helper
-  exits as soon as the clipboard changes.
+- No background services, tray icons, daemons or helper processes (on Linux
+  the copied image intentionally disappears when the app quits).
 - No web views.
 - Never block the UI thread on disk I/O, decoding/encoding or full-resolution
   rendering.

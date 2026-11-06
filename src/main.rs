@@ -27,17 +27,6 @@ fn main() -> ExitCode {
     let args: Vec<std::ffi::OsString> = std::env::args_os().skip(1).collect();
 
     match args.first().and_then(|a| a.to_str()) {
-        Some("--hold-clipboard") => {
-            // Internal: keep a copied image alive after the editor exits
-            // (Linux), until something else is copied.
-            return match args.get(1).map(PathBuf::from) {
-                Some(p) => match markly::clipboard::hold_clipboard(&p) {
-                    Ok(()) => ExitCode::SUCCESS,
-                    Err(_) => ExitCode::FAILURE,
-                },
-                None => ExitCode::FAILURE,
-            };
-        }
         Some(flag @ ("--install-desktop-entry" | "--uninstall-desktop-entry")) => {
             return desktop_entry(flag == "--install-desktop-entry");
         }

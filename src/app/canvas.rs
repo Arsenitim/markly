@@ -133,6 +133,7 @@ impl MarklyApp {
 
         // ---- painting ------------------------------------------------------
         let view = self.view;
+        let tool = self.effective_tool();
         let od = self.doc.as_mut().unwrap();
         let img_rect = to_rect(view.image_rect_to_screen(Rect::from_min_size(Pt::ZERO, iw, ih)));
         painter.add(
@@ -171,7 +172,7 @@ impl MarklyApp {
             && self.editing.is_none()
         {
             paint_selection(&painter, &view, &a.shape);
-        } else if self.tool == Tool::Select
+        } else if tool == Tool::Select
             && self.drag.is_none()
             && resp.hovered()
             && let Some(p) = hover_pos
@@ -279,7 +280,7 @@ impl MarklyApp {
             }
             if middle_pressed || (space && pressed) {
                 self.drag = Some(Drag::Pan { last: pos });
-            } else if double && self.tool == Tool::Select {
+            } else if double && self.effective_tool() == Tool::Select {
                 self.try_edit_text_at(ip);
             } else {
                 self.begin_press(ip, pos, mods.shift);
@@ -360,7 +361,7 @@ impl MarklyApp {
             return;
         }
 
-        let tool = self.tool;
+        let tool = self.effective_tool();
         match tool {
             Tool::Select => {
                 let hit = self.doc.as_ref().unwrap().doc.hit_test(ip, tol);
@@ -522,7 +523,7 @@ impl MarklyApp {
                 if let Some((_, h)) = pos.and_then(|p| self.handle_at(p)) {
                     handle_cursor(h)
                 } else {
-                    match self.tool {
+                    match self.effective_tool() {
                         Tool::Select => {
                             let over = pos.zip(self.doc.as_ref()).and_then(|(p, od)| {
                                 od.doc.hit_test(

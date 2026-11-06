@@ -6,7 +6,7 @@ stored in **original-image pixel coordinates**.
 
 ```text
 src/
-  main.rs        CLI entry: --hold-clipboard helper mode, window options
+  main.rs        CLI entry: flags, desktop-entry install, window options
   lib.rs         library root (everything below is testable without a GUI)
   geometry.rs    Pt/Rect, ViewTransform (image ↔ canvas ↔ screen), shape math
   model.rs       Document, Annotation{id, Shape}, styles, hit testing, handles
@@ -16,7 +16,7 @@ src/
   store.rs       on-disk layout, atomic writes, history listing, writer thread
   settings.rs    persisted preferences (tool, per-tool style, theme, window)
   undo.rs        snapshot undo/redo
-  clipboard.rs   clipboard worker thread + Linux exit handoff
+  clipboard.rs   clipboard worker thread
   app/           egui front-end (GUI state only)
     mod.rs       app state, document lifecycle, shortcuts, background results
     canvas.rs    view transform use, pointer interaction, preview painting
@@ -132,9 +132,9 @@ Anything else asks the clipboard worker, which tries an image, then a copied
 file list, then a `file://`/path text. While a text annotation is being
 edited, clipboard events are left to the text field.
 
-Copy: the worker flattens and sets an RGBA image. On Linux, at exit, if the
-clipboard still holds our image (checked by fingerprint), it is handed to a
-self-terminating `markly --hold-clipboard` child process; see the README.
+Copy: the worker flattens and sets an RGBA image. On Linux the image is served
+by this process, so it leaves the clipboard when Markly quits. That is
+intentional and documented ("paste before you quit").
 
 ## Switching to wgpu
 

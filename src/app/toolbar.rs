@@ -258,7 +258,7 @@ impl MarklyApp {
                     Tool::Pixelate => Icon::Pixelate,
                 };
                 let tip = format!("{} ({})", tool.label(), tool.key_hint());
-                if icon_button(ui, icon, &tip, true, self.tool == tool, pal, 36.0).clicked() {
+                if icon_button(ui, icon, &tip, true, self.effective_tool() == tool, pal, 36.0).clicked() {
                     self.set_tool(tool);
                 }
             }

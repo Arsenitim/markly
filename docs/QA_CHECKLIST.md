@@ -13,7 +13,7 @@ Status legend: ✅ verified · ❌ failed · — not yet tested
 | Launch, restore last document | ✅ | — | — | — |
 | Paste image from the system clipboard | ✅ (`wl-copy`, image/png) | — | — | — |
 | Copy flattened image, readable by another app | ✅ (`wl-paste`) | — | — | — |
-| Copied image survives closing the editor | ✅ (holder exits when replaced) | — | n/a | n/a |
+| Alt held = temporary Select | ✅ (scripted input) | — | — | — |
 | Drawing, select, resize, undo/redo, delete | ✅ (scripted input) | — | — | — |
 | Text editing on canvas | ✅ (scripted input) | — | — | — |
 | History panel and thumbnails | ✅ | — | — | — |
@@ -60,9 +60,9 @@ annotation (including pixelation and text), with no selection handles.
 - [ ] Chat apps (Slack, Discord, Teams, Telegram, Signal)
 - [ ] Image editors (GIMP, Paint, Preview "New from Clipboard", Krita)
 - [ ] Office (LibreOffice, Word, Pages)
-- [ ] **Linux:** copy, close Markly, then paste in another app. It must still
-      work. Then copy something else and check that the `markly --hold-clipboard`
-      process has exited (`pgrep -a markly`).
+- [ ] Windows/macOS: copy, close Markly, then paste elsewhere. It still works.
+      (On Linux the image is expected to disappear on quit; check that no
+      `markly` process remains afterwards: `pgrep -a markly`.)
 - [ ] **Linux:** repeat on X11 and on Wayland (GNOME, KDE Plasma, a wlroots compositor).
 - [ ] Cmd+C while editing a text label copies the selected text only.
 
@@ -74,6 +74,9 @@ For each tool (A, R, E, T, P, X), with several colours and sizes:
 - [ ] Shift constrains (15° arrows, squares, circles).
 - [ ] A click without dragging does not leave an invisible annotation behind.
 - [ ] The new annotation is selected; colour/size buttons change it, and undo reverts that.
+- [ ] Holding Alt with a drawing tool behaves like Select (rail highlights Select);
+      releasing Alt returns to the drawing tool. Check on your desktop that
+      Alt+drag is not captured by the window manager (some X11 WMs move windows).
 - [ ] Select tool: click selects, hover highlights, drag moves, handles resize,
       Delete/Backspace removes, Escape clears selection, arrow keys nudge.
 - [ ] Escape during a drag cancels it.
