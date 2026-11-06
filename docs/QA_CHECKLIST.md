@@ -8,7 +8,7 @@ Status legend: ✅ verified · ❌ failed · — not yet tested
 
 ## Verification status
 
-| Area | Linux: GNOME 50 Wayland (Ubuntu 26.04) | Linux X11 | Windows 10/11 | macOS (Apple Silicon) |
+| Area | Linux: GNOME 50 Wayland (Ubuntu 26.04) | Linux X11 | Windows 10/11 | macOS (universal: Apple Silicon + Intel) |
 |---|---|---|---|---|
 | Launch, restore last document | ✅ | — | — | — |
 | Paste image from the system clipboard | ✅ (`wl-copy`, image/png) | — | — | — |

@@ -69,7 +69,7 @@ unpack it. There is no installer and no auto-update.
   under `~/.local/share` and points the launcher at the binary's current
   location, so run it again if you move the binary.
   `./markly --uninstall-desktop-entry` removes them.
-- **macOS (Apple Silicon):** move `Markly.app` to Applications. The app is
+- **macOS (Apple Silicon and Intel, one universal app):** move `Markly.app` to Applications. The app is
   ad-hoc signed but not notarised, so the first launch is blocked. Either
   right-click → Open, or run `xattr -dr com.apple.quarantine /Applications/Markly.app`.
 - **Windows (x86_64):** run `markly.exe`. It carries the Markly icon; pin it

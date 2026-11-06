@@ -24,9 +24,10 @@ jobs:
             os: ubuntu-22.04 # older glibc for wider compatibility
             target: x86_64-unknown-linux-gnu
             archive: tar.gz
-          - name: macos-aarch64
+          - name: macos-universal
             os: macos-15
-            target: aarch64-apple-darwin
+            # Universal binary: Apple Silicon + Intel, merged with lipo.
+            target: universal-apple-darwin
             archive: app-zip
           - name: windows-x86_64
             os: windows-latest
@@ -37,10 +38,23 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ matrix.target }}
+          targets: ${{ matrix.target == 'universal-apple-darwin' && 'aarch64-apple-darwin,x86_64-apple-darwin' || matrix.target }}
       - uses: Swatinem/rust-cache@v2
       - name: Build
-        run: cargo build --release --locked --target ${{ matrix.target }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${{ matrix.target }}" == universal-apple-darwin ]]; then
+            for t in aarch64-apple-darwin x86_64-apple-darwin; do
+              cargo build --release --locked --target "$t"
+            done
+            mkdir -p target/universal-apple-darwin/release
+            lipo -create -output target/universal-apple-darwin/release/markly \
+              target/aarch64-apple-darwin/release/markly target/x86_64-apple-darwin/release/markly
+            lipo -info target/universal-apple-darwin/release/markly
+          else
+            cargo build --release --locked --target ${{ matrix.target }}
+          fi
       - name: Package
         shell: bash
         run: |

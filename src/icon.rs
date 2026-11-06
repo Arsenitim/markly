@@ -1,4 +1,4 @@
-//! The application icon: a white annotation arrow on an indigo rounded
+//! The application icon: a white annotation arrow on a pink rounded
 //! square (original artwork). Every format is generated from the geometry
 //! here: the runtime window icon, the Linux PNG/SVG icons, the Windows
 //! `.ico` and the macOS iconset (`cargo run --example make_icons`).
@@ -18,8 +18,9 @@ pub const MARGIN_DEFAULT: f32 = 0.047;
 /// Apple's icon grid leaves ~10 % around the body.
 pub const MARGIN_MACOS: f32 = 0.098;
 
-const TOP: [u8; 3] = [124, 136, 255];
-const BOTTOM: [u8; 3] = [76, 86, 232];
+// Pink around #F92672, lighter at the top.
+const TOP: [u8; 3] = [255, 84, 146];
+const BOTTOM: [u8; 3] = [234, 22, 98];
 
 struct Geometry {
     body: Rect,
@@ -125,7 +126,7 @@ mod tests {
         for size in [16, 32, 48, 128, 512] {
             let img = render(size, MARGIN_DEFAULT);
             assert_eq!(img.dimensions(), (size, size));
-            // Transparent corner, opaque indigo body, white arrow in the middle.
+            // Transparent corner, opaque pink body, white arrow in the middle.
             assert_eq!(img.get_pixel(0, 0).0[3], 0);
             // Brightest pixel around the centre (small sizes are antialiased).
             let c = (size / 2 - 1..=size / 2 + 1)
