@@ -132,6 +132,9 @@ pub struct MarklyApp {
     max_texture_side: usize,
 
     tool: Tool,
+    /// The drawing tool whose style the palette shows while in Select mode
+    /// with nothing selected (so colour/size controls never disappear).
+    last_draw_tool: Tool,
     selection: Option<AnnotationId>,
     drag: Option<Drag>,
     editing: Option<TextEditing>,
@@ -234,6 +237,11 @@ impl MarklyApp {
             bg_tx,
             bg_rx,
             tool: settings.tool,
+            last_draw_tool: if settings.tool == Tool::Select {
+                Tool::Arrow
+            } else {
+                settings.tool
+            },
             settings,
             doc: None,
             loading: None,
@@ -556,6 +564,7 @@ impl MarklyApp {
             self.tool = tool;
             if tool != Tool::Select {
                 self.selection = None;
+                self.last_draw_tool = tool;
             }
             self.persist_settings();
         }
@@ -586,7 +595,11 @@ impl MarklyApp {
         {
             return Some(tool_for(&a.shape));
         }
-        (self.tool != Tool::Select).then_some(self.tool)
+        Some(if self.tool == Tool::Select {
+            self.last_draw_tool
+        } else {
+            self.tool
+        })
     }
 
     /// Indices of the style shown as active in the palette.
