@@ -264,12 +264,11 @@
 
 <script>
 (() => {
-  // Per-OS screenshot. Fill in `windows` once a Windows screenshot exists, e.g.
-  //   { src: "img/screenshot-windows.webp", w: 1600, h: 1000, caption: "Markly on Windows", framed: true }
-  // `framed` adds rounded corners and a shadow, for shots without their own window shadow.
+  // Per-OS screenshot. `framed` adds rounded corners and a shadow, for shots
+  // without their own window shadow.
   const SHOTS = {
     mac:     { src: "img/screenshot-macos.webp", w: 1600, h: 1090, caption: "Markly on macOS" },
-    windows: null,
+    windows: { src: "img/screenshot-windows.webp", w: 1600, h: 1002, caption: "Markly on Windows", framed: true },
     linux:   { src: "img/screenshot-linux.webp", w: 1200, h: 750, caption: "Markly on Linux", framed: true },
   };
   const NAMES = { mac: "macOS", windows: "Windows", linux: "Linux" };

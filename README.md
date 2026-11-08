@@ -12,6 +12,9 @@ remembered automatically, even if you never save it.
 ![Markly on macOS (light theme) with an annotated screenshot and the history panel](docs/screenshot-macos.png)
 <sub>macOS</sub>
 
+![Markly on Windows (light theme) with an annotated screenshot and the history panel](docs/screenshot-windows.png)
+<sub>Windows</sub>
+
 ![Markly on Linux (dark theme) with an annotated screenshot and the history panel](docs/screenshot.png)
 <sub>Linux</sub>
 
