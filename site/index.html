@@ -1,0 +1,355 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Markly · paste, annotate, copy</title>
+<meta name="description" content="Markly is a small, fast, local-first image annotation app for macOS, Windows and Linux. Paste an image, annotate it, copy the result.">
+<meta property="og:title" content="Markly">
+<meta property="og:description" content="Paste an image, annotate it, copy the result. For macOS, Windows and Linux. Free and open source.">
+<meta property="og:image" content="https://markly.developitbest.com/img/screenshot-macos.webp">
+<meta name="theme-color" content="#ff336c">
+<link rel="icon" href="img/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="img/icon-256.png">
+<style>
+  :root {
+    --bg: #ffffff;
+    --bg-soft: #f6f6f8;
+    --text: #17171c;
+    --muted: #6b6b76;
+    --line: #e6e6ea;
+    --accent: #ff336c;
+    --accent-ink: #ffffff;
+    --code-bg: #f3f3f6;
+    color-scheme: light dark;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #111114;
+      --bg-soft: #1a1a1f;
+      --text: #ececf1;
+      --muted: #9a9aa6;
+      --line: #2a2a31;
+      --code-bg: #1d1d23;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 17px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, "Helvetica Neue", Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: inherit; }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 0 20px; }
+
+  header.top { display: flex; align-items: center; justify-content: space-between; padding: 22px 0; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 650; font-size: 18px; text-decoration: none; }
+  .brand img { width: 30px; height: 30px; }
+  .gh { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); text-decoration: none; font-size: 15px; }
+  .gh:hover { color: var(--text); }
+  .gh svg { width: 20px; height: 20px; fill: currentColor; }
+
+  .hero { text-align: center; padding: 56px 0 28px; }
+  h1 { font-size: clamp(36px, 6vw, 56px); line-height: 1.08; letter-spacing: -0.025em; margin: 0 0 16px; font-weight: 700; }
+  h1 .dot { color: var(--accent); }
+  .lede { color: var(--muted); font-size: clamp(17px, 2.2vw, 20px); max-width: 560px; margin: 0 auto 30px; }
+
+  .os-toggle {
+    display: inline-flex; padding: 4px; gap: 2px;
+    background: var(--bg-soft); border: 1px solid var(--line); border-radius: 999px;
+  }
+  .os-toggle button {
+    appearance: none; border: 0; background: transparent; color: var(--muted);
+    font: inherit; font-size: 15px; font-weight: 550;
+    padding: 8px 18px; border-radius: 999px; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 7px;
+  }
+  .os-toggle button svg { width: 15px; height: 15px; fill: currentColor; }
+  .os-toggle button:hover { color: var(--text); }
+  .os-toggle button[aria-selected="true"] { background: var(--text); color: var(--bg); }
+  .os-toggle button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .cta { margin-top: 22px; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 9px;
+    background: var(--accent); color: var(--accent-ink); text-decoration: none;
+    font-weight: 600; padding: 13px 24px; border-radius: 12px;
+    box-shadow: 0 6px 20px -8px rgba(255, 51, 108, .6);
+    transition: transform .12s ease, box-shadow .12s ease;
+  }
+  .btn:hover { transform: translateY(-1px); box-shadow: 0 10px 26px -10px rgba(255, 51, 108, .7); }
+  .btn svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+  .meta { color: var(--muted); font-size: 14px; }
+  .meta a { color: var(--muted); }
+
+  figure.shot { margin: 40px auto 0; text-align: center; }
+  figure.shot img { width: 100%; height: auto; display: block; margin: 0 auto; transition: opacity .18s ease; }
+  figure.shot img.framed { border-radius: 12px; box-shadow: 0 30px 60px -30px rgba(0,0,0,.45), 0 0 0 1px var(--line); max-width: 920px; }
+  figure.shot figcaption { color: var(--muted); font-size: 13px; margin-top: 10px; }
+
+  section { padding: 64px 0 0; }
+  h2 { font-size: 26px; letter-spacing: -0.015em; margin: 0 0 22px; }
+
+  .features { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px 36px; }
+  .features h3 { font-size: 16px; margin: 0 0 4px; }
+  .features p { margin: 0; color: var(--muted); font-size: 15.5px; }
+
+  .install { max-width: 720px; }
+  .install-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 22px; }
+  .install-head h2 { margin: 0; }
+  ol.steps { list-style: none; counter-reset: s; padding: 0; margin: 0; }
+  ol.steps > li { counter-increment: s; position: relative; padding: 0 0 22px 44px; }
+  ol.steps > li::before {
+    content: counter(s); position: absolute; left: 0; top: 0;
+    width: 28px; height: 28px; border-radius: 50%;
+    background: var(--bg-soft); border: 1px solid var(--line);
+    font-size: 14px; font-weight: 650; display: grid; place-items: center;
+  }
+  ol.steps > li > strong { display: block; margin-bottom: 2px; }
+  ol.steps p { margin: 4px 0 0; color: var(--muted); font-size: 15.5px; }
+  code {
+    font: 14px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    background: var(--code-bg); border: 1px solid var(--line); border-radius: 6px; padding: 1px 6px;
+  }
+  .cmd {
+    position: relative; margin: 8px 0 0; background: var(--code-bg); border: 1px solid var(--line);
+    border-radius: 10px; padding: 12px 84px 12px 14px; overflow-x: auto;
+  }
+  .cmd code { background: none; border: 0; padding: 0; white-space: pre; }
+  .copy {
+    position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+    appearance: none; border: 1px solid var(--line); background: var(--bg); color: var(--muted);
+    font: inherit; font-size: 13px; padding: 4px 10px; border-radius: 7px; cursor: pointer;
+  }
+  .copy:hover { color: var(--text); }
+  .note { margin-top: 6px; padding: 14px 16px; border-radius: 10px; background: var(--bg-soft); color: var(--muted); font-size: 14.5px; }
+  .note code { font-size: 13px; }
+  [hidden] { display: none !important; }
+
+  .private { text-align: center; max-width: 620px; margin: 0 auto; }
+  .private p { color: var(--muted); margin: 0; }
+
+  footer { margin-top: 80px; border-top: 1px solid var(--line); padding: 26px 0 40px; color: var(--muted); font-size: 14px; display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  footer a { color: var(--muted); }
+
+  @media (max-width: 760px) {
+    .hero { padding-top: 32px; }
+    .features { grid-template-columns: 1fr 1fr; }
+    .os-toggle button { padding: 8px 13px; }
+  }
+  @media (max-width: 480px) {
+    .wrap { padding: 0 16px; }
+    .features { grid-template-columns: 1fr; }
+    .os-toggle button svg { display: none; }
+    figure.shot img.framed { border-radius: 8px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <a class="brand" href="./"><img src="img/icon.svg" alt="" width="30" height="30">Markly</a>
+    <a class="gh" href="https://github.com/Arsenitim/markly">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+      GitHub
+    </a>
+  </header>
+
+  <main>
+    <div class="hero">
+      <h1>Paste. Annotate. Copy<span class="dot">.</span></h1>
+      <p class="lede">A small, fast image annotation app for macOS, Windows and Linux. Arrows, boxes, text and blur, and your work is saved automatically.</p>
+
+      <div class="os-toggle" role="tablist" aria-label="Operating system">
+        <button role="tab" data-os="mac" aria-selected="true">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16.37 12.6c-.02-2.3 1.88-3.4 1.96-3.46-1.07-1.56-2.73-1.77-3.32-1.8-1.41-.14-2.76.83-3.47.83-.72 0-1.82-.81-3-.79-1.54.02-2.96.9-3.75 2.27-1.6 2.78-.41 6.89 1.15 9.14.76 1.1 1.67 2.34 2.86 2.3 1.15-.05 1.58-.74 2.97-.74 1.38 0 1.77.74 2.98.72 1.23-.02 2.01-1.12 2.76-2.23.87-1.28 1.23-2.52 1.25-2.58-.03-.01-2.4-.92-2.42-3.65zM14.1 5.86c.63-.77 1.06-1.83.94-2.89-.91.04-2.01.61-2.66 1.37-.58.67-1.1 1.76-.96 2.8 1.01.08 2.05-.52 2.68-1.28z"/></svg>
+          macOS
+        </button>
+        <button role="tab" data-os="windows" aria-selected="false">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5.5 10.4 4.5v7H3zM11.4 4.35 21 3v8.5h-9.6zM3 12.5h7.4v7L3 18.5zM11.4 12.5H21V21l-9.6-1.35z"/></svg>
+          Windows
+        </button>
+        <button role="tab" data-os="linux" aria-selected="false">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2c-2.2 0-3.6 1.9-3.6 4.6 0 1.3.2 2.2-.6 3.5-.9 1.4-2.6 3.5-2.9 6.1-.1 1 .3 1.6.8 1.9-.6.5-1.6.8-1.6 1.6 0 1 1.6 1 3 1.4 1.1.3 1.8 1 2.9.9 1-.1 1.4-.8 2-.8s1 .7 2 .8c1.1.1 1.8-.6 2.9-.9 1.4-.4 3-.4 3-1.4 0-.8-1-1.1-1.6-1.6.5-.3.9-.9.8-1.9-.3-2.6-2-4.7-2.9-6.1-.8-1.3-.6-2.2-.6-3.5C15.6 3.9 14.2 2 12 2zm-1.6 4.2c.5 0 .8.6.8 1.2 0 .3-.1.5-.2.7l-.6-.2c.1-.1.1-.3.1-.5 0-.3-.1-.6-.3-.6s-.3.3-.3.6v.2l-.5-.2V7.4c0-.6.4-1.2 1-1.2zm3.2 0c.6 0 1 .6 1 1.2 0 .2 0 .4-.1.5l-.6.2v-.2c0-.3-.2-.6-.4-.6s-.4.3-.4.6c0 .1 0 .3.1.4l-.5.2c-.1-.2-.1-.4-.1-.6 0-.6.4-1.2 1-1.2zM12 8.6c.9 0 2 .6 2 1s-1.1 1.2-2 1.2-2-.8-2-1.2 1.1-1 2-1z"/></svg>
+          Linux
+        </button>
+      </div>
+
+      <div class="cta">
+        <a class="btn" id="download" href="https://github.com/Arsenitim/markly/releases/latest">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10.5l5 5 5-5M5 20h14"/></svg>
+          <span id="download-label">Download for macOS</span>
+        </a>
+        <div class="meta"><span id="download-meta">Free and open source</span> · <a href="https://github.com/Arsenitim/markly/releases">All releases</a></div>
+      </div>
+
+      <figure class="shot">
+        <img id="shot" src="img/screenshot-macos.webp" width="1600" height="1090" alt="Markly on macOS with an annotated screenshot and the history panel">
+        <figcaption id="shot-caption">Markly on macOS</figcaption>
+      </figure>
+    </div>
+
+    <section>
+      <div class="features">
+        <div><h3>Paste and go</h3><p>Paste with ⌘/Ctrl+V, drop a file, or open one. PNG, JPEG and WebP.</p></div>
+        <div><h3>Clean annotations</h3><p>Straight and curved arrows, boxes, ellipses, text, freehand and pixelation.</p></div>
+        <div><h3>Always editable</h3><p>Select, move, resize and recolour any mark. Undo and redo everything.</p></div>
+        <div><h3>Copy at full size</h3><p>⌘/Ctrl+C puts the annotated image on the clipboard at the original resolution.</p></div>
+        <div><h3>Never lose work</h3><p>Every image is autosaved and waits in the history panel next time.</p></div>
+        <div><h3>Really redacts</h3><p>Pixelation destroys the pixels underneath. Nothing can be recovered from the copy.</p></div>
+      </div>
+    </section>
+
+    <section class="install" id="install">
+      <div class="install-head">
+        <h2>Install</h2>
+        <div class="os-toggle" role="tablist" aria-label="Operating system">
+          <button role="tab" data-os="mac" aria-selected="true">macOS</button>
+          <button role="tab" data-os="windows" aria-selected="false">Windows</button>
+          <button role="tab" data-os="linux" aria-selected="false">Linux</button>
+        </div>
+      </div>
+
+      <div data-panel="mac">
+        <ol class="steps">
+          <li><strong>Download and unzip</strong>
+            <p>Get <a class="dl-link" data-os="mac" href="https://github.com/Arsenitim/markly/releases/latest">the macOS zip</a>. It is one universal app for Apple Silicon and Intel.</p></li>
+          <li><strong>Move Markly.app to Applications</strong></li>
+          <li><strong>Allow the first launch</strong>
+            <p>The app is not notarised by Apple, so macOS blocks it the first time. Right-click Markly.app and choose <em>Open</em>, or run:</p>
+            <div class="cmd"><code>xattr -dr com.apple.quarantine /Applications/Markly.app</code><button class="copy">Copy</button></div></li>
+        </ol>
+      </div>
+
+      <div data-panel="windows" hidden>
+        <ol class="steps">
+          <li><strong>Download and unzip</strong>
+            <p>Get <a class="dl-link" data-os="windows" href="https://github.com/Arsenitim/markly/releases/latest">the Windows zip</a> (x86_64) and extract it anywhere.</p></li>
+          <li><strong>Run markly.exe</strong>
+            <p>If SmartScreen warns about an unknown publisher, click <em>More info</em>, then <em>Run anyway</em>.</p></li>
+          <li><strong>Pin it</strong>
+            <p>Pin it to the taskbar or Start, or make a shortcut. There is no installer and nothing else to set up.</p></li>
+        </ol>
+      </div>
+
+      <div data-panel="linux" hidden>
+        <ol class="steps">
+          <li><strong>Download and unpack</strong>
+            <p>Get <a class="dl-link" data-os="linux" href="https://github.com/Arsenitim/markly/releases/latest">the Linux archive</a> (x86_64), then:</p>
+            <div class="cmd"><code id="linux-untar">tar xzf markly-*-linux-x86_64.tar.gz</code><button class="copy">Copy</button></div></li>
+          <li><strong>Run it</strong>
+            <div class="cmd"><code>./markly</code><button class="copy">Copy</button></div></li>
+          <li><strong>Add it to your app launcher <span class="meta">(optional)</span></strong>
+            <p>Puts Markly with its icon in GNOME, KDE and other launchers. Run it again if you move the binary.</p>
+            <div class="cmd"><code>./markly --install-desktop-entry</code><button class="copy">Copy</button></div></li>
+        </ol>
+        <div class="note">Needs Wayland or X11 with OpenGL, and the XDG desktop portal for file dialogs. Almost every desktop already has them. On Debian or Ubuntu, if something is missing: <code>sudo apt install libxkbcommon0 libwayland-client0 libegl1 xdg-desktop-portal</code></div>
+      </div>
+    </section>
+
+    <section class="private">
+      <h2>Stays on your computer</h2>
+      <p>No accounts, no cloud, no telemetry. Markly never touches the network.</p>
+    </section>
+  </main>
+
+  <footer>
+    <span>Markly · MIT or Apache-2.0</span>
+    <span><a href="https://github.com/Arsenitim/markly">Source on GitHub</a> · <a href="https://github.com/Arsenitim/markly/issues">Report an issue</a></span>
+  </footer>
+</div>
+
+<script>
+(() => {
+  // Per-OS screenshot. Fill in `windows` once a Windows screenshot exists, e.g.
+  //   { src: "img/screenshot-windows.webp", w: 1600, h: 1000, caption: "Markly on Windows", framed: true }
+  // `framed` adds rounded corners and a shadow, for shots without their own window shadow.
+  const SHOTS = {
+    mac:     { src: "img/screenshot-macos.webp", w: 1600, h: 1090, caption: "Markly on macOS" },
+    windows: null,
+    linux:   { src: "img/screenshot-linux.webp", w: 1200, h: 750, caption: "Markly on Linux", framed: true },
+  };
+  const NAMES = { mac: "macOS", windows: "Windows", linux: "Linux" };
+  const ASSET = { mac: /macos.*\.zip$/, windows: /windows.*\.zip$/, linux: /linux.*\.tar\.gz$/ };
+  const assets = {};
+  let current = "mac";
+
+  const shot = document.getElementById("shot");
+  const caption = document.getElementById("shot-caption");
+  const dl = document.getElementById("download");
+  const dlLabel = document.getElementById("download-label");
+  const dlMeta = document.getElementById("download-meta");
+  let version = "";
+
+  function mb(bytes) { return (bytes / 1048576).toFixed(1) + " MB"; }
+
+  function render() {
+    const os = current;
+    document.querySelectorAll(".os-toggle button").forEach(b =>
+      b.setAttribute("aria-selected", String(b.dataset.os === os)));
+    document.querySelectorAll("[data-panel]").forEach(p => { p.hidden = p.dataset.panel !== os; });
+
+    const s = SHOTS[os] || SHOTS.mac;
+    if (!shot.src.endsWith(s.src)) {
+      shot.style.opacity = "0";
+      const img = new Image();
+      img.onload = () => { shot.src = s.src; shot.width = s.w; shot.height = s.h; shot.classList.toggle("framed", !!s.framed); shot.style.opacity = "1"; };
+      img.src = s.src;
+    }
+    shot.alt = s.caption + " with an annotated screenshot and the history panel";
+    caption.textContent = SHOTS[os] ? s.caption : "Shown on macOS. Windows looks the same, inside a Windows window.";
+
+    dlLabel.textContent = "Download for " + NAMES[os];
+    const a = assets[os];
+    dl.href = a ? a.url : "https://github.com/Arsenitim/markly/releases/latest";
+    dlMeta.textContent = a ? `Version ${version} · ${mb(a.size)} · free and open source` : "Free and open source";
+    document.querySelectorAll(".dl-link").forEach(l => {
+      const x = assets[l.dataset.os];
+      if (x) l.href = x.url;
+    });
+    if (assets.linux) document.getElementById("linux-untar").textContent = "tar xzf " + assets.linux.name;
+  }
+
+  function select(os) {
+    current = os;
+    try { localStorage.setItem("markly-os", os); } catch (e) {}
+    render();
+  }
+
+  function detect() {
+    try { const saved = localStorage.getItem("markly-os"); if (saved in NAMES) return saved; } catch (e) {}
+    const p = ((navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || navigator.userAgent).toLowerCase();
+    if (p.includes("win")) return "windows";
+    if (p.includes("linux") && !/android/i.test(navigator.userAgent)) return "linux";
+    return "mac";
+  }
+
+  document.querySelectorAll(".os-toggle button").forEach(b => b.addEventListener("click", () => select(b.dataset.os)));
+  document.querySelectorAll(".copy").forEach(b => b.addEventListener("click", async () => {
+    const text = b.previousElementSibling.textContent;
+    try { await navigator.clipboard.writeText(text); b.textContent = "Copied"; }
+    catch (e) { b.textContent = "Select it"; }
+    setTimeout(() => { b.textContent = "Copy"; }, 1400);
+  }));
+
+  current = detect();
+  render();
+
+  fetch("https://api.github.com/repos/Arsenitim/markly/releases/latest", { headers: { Accept: "application/vnd.github+json" } })
+    .then(r => r.ok ? r.json() : Promise.reject(r.status))
+    .then(rel => {
+      version = (rel.tag_name || "").replace(/^v/, "");
+      for (const os in ASSET) {
+        const a = (rel.assets || []).find(x => ASSET[os].test(x.name));
+        if (a) assets[os] = { url: a.browser_download_url, size: a.size, name: a.name };
+      }
+      render();
+    })
+    .catch(() => {});
+})();
+</script>
+</body>
+</html>
