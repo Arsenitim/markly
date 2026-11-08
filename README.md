@@ -9,6 +9,8 @@ Linux. Built with Rust and egui.
 **Paste an image, annotate it, copy the result, close the app.** Your work is
 remembered automatically, even if you never save it.
 
+**Website and downloads:** [markly.developitbest.com](https://markly.developitbest.com)
+
 ![Markly on macOS (light theme) with an annotated screenshot and the history panel](docs/screenshot-macos.png)
 <sub>macOS</sub>
 
