@@ -13,7 +13,7 @@ Measured, not assumed.
 ## Results (2026-11-05, warm file cache)
 
 Startup to first painted frame, then to the restored document being shown
-(`MARKLY_TRACE=1 MARKLY_BENCH_EXIT=1`, three runs each):
+(`SKRIB_TRACE=1 SKRIB_BENCH_EXIT=1`, three runs each):
 
 | Restored document | First frame | Load (background) | Doc shown | Whole process incl. exit | Peak RSS |
 |---|---|---|---|---|---|
@@ -54,7 +54,7 @@ Off-thread costs (`cargo run --release --example bench_load`):
 ```sh
 cargo build --release
 cargo run --release --example demo_document -- /tmp/m4k 3840 2160
-MARKLY_TRACE=1 MARKLY_BENCH_EXIT=1 MARKLY_DATA_DIR=/tmp/m4k /usr/bin/time -v target/release/markly
+SKRIB_TRACE=1 SKRIB_BENCH_EXIT=1 SKRIB_DATA_DIR=/tmp/m4k /usr/bin/time -v target/release/skrib
 ```
 
 ## Known costs and possible future work

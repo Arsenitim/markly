@@ -1,4 +1,4 @@
-//! Markly (provisional name): a lightweight, local-first image annotation
+//! Skrib: a lightweight, local-first image annotation
 //! utility. The library holds everything that is testable without a GUI;
 //! `app` contains the egui front-end.
 

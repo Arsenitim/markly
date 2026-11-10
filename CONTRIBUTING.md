@@ -36,12 +36,12 @@ what the tests exercise.
 
 | Variable / command | Effect |
 |---|---|
-| `MARKLY_DATA_DIR=/tmp/x` | Use a throwaway data directory |
-| `MARKLY_TRACE=1` | Print first-frame, load and shutdown timings |
-| `MARKLY_BENCH_EXIT=1` | Quit as soon as the document is shown (startup benchmark) |
-| `MARKLY_DEBUG_SCREENSHOT=out.png` | Save a window screenshot once the document is shown, then quit |
-| `MARKLY_DEBUG_SELECT_LAST=1` | Select the last annotation after loading (to see handles) |
-| `MARKLY_DEBUG_SCRIPT=steps.txt` | Replay synthetic input (clicks, drags, keys, text, copy/paste, screenshots). Syntax in `src/app/script.rs` |
+| `SKRIB_DATA_DIR=/tmp/x` | Use a throwaway data directory |
+| `SKRIB_TRACE=1` | Print first-frame, load and shutdown timings |
+| `SKRIB_BENCH_EXIT=1` | Quit as soon as the document is shown (startup benchmark) |
+| `SKRIB_DEBUG_SCREENSHOT=out.png` | Save a window screenshot once the document is shown, then quit |
+| `SKRIB_DEBUG_SELECT_LAST=1` | Select the last annotation after loading (to see handles) |
+| `SKRIB_DEBUG_SCRIPT=steps.txt` | Replay synthetic input (clicks, drags, keys, text, copy/paste, screenshots). Syntax in `src/app/script.rs` |
 | `cargo run --release --example demo_document -- DIR [W H]` | Seed DIR with a synthetic screenshot carrying every annotation type, plus `export.png` for preview-vs-export comparison |
 | `cargo run --release --example bench_load -- IMAGE` | Time the stages of opening an image |
 | `cargo run --example make_icons` | Regenerate `assets/icons/` (SVG, PNG, Windows `.ico`, macOS iconset) after changing `src/icon.rs` |

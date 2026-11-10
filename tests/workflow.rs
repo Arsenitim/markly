@@ -1,17 +1,17 @@
 //! End-to-end check of the core workflow through the public library API:
 //! paste → annotate → autosave → "restart" → restore → identical export.
 
-use markly::geometry::{Pt, Rect};
-use markly::model::{Document, PALETTE, Shape, Style, TEXT_SIZES};
-use markly::render;
-use markly::settings::Settings;
-use markly::store::{self, OriginalData, Store, ThumbJob, Writer};
-use markly::undo::UndoStack;
+use skrib::geometry::{Pt, Rect};
+use skrib::model::{Document, PALETTE, Shape, Style, TEXT_SIZES};
+use skrib::render;
+use skrib::settings::Settings;
+use skrib::store::{self, OriginalData, Store, ThumbJob, Writer};
+use skrib::undo::UndoStack;
 use std::sync::{Arc, mpsc};
 use std::time::Duration;
 
 fn temp_dir(tag: &str) -> std::path::PathBuf {
-    std::env::temp_dir().join(format!("markly-it-{tag}-{}", markly::model::new_document_id()))
+    std::env::temp_dir().join(format!("skrib-it-{tag}-{}", skrib::model::new_document_id()))
 }
 
 fn screenshot() -> image::RgbaImage {

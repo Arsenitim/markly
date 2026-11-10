@@ -5,7 +5,7 @@ fn main() {
     let path = std::env::args().nth(1).expect("usage: bench_load <image>");
     let bytes = std::fs::read(&path).unwrap();
     let t = Instant::now();
-    let img = markly::store::decode_image(&bytes).unwrap();
+    let img = skrib::store::decode_image(&bytes).unwrap();
     let decode = t.elapsed();
     let t = Instant::now();
     let alpha = img.as_raw().as_chunks::<4>().0.iter().any(|p| p[3] != 255);
@@ -17,13 +17,13 @@ fn main() {
     );
     let conv = t.elapsed();
     let t = Instant::now();
-    let (thumb, _) = markly::store::thumbnail_base(&img);
+    let (thumb, _) = skrib::store::thumbnail_base(&img);
     let th = t.elapsed();
     let t = Instant::now();
-    let png = markly::store::encode_png(&img).unwrap();
+    let png = skrib::store::encode_png(&img).unwrap();
     let enc = t.elapsed();
     let t = Instant::now();
-    let flat = markly::render::flatten(&img, &[]);
+    let flat = skrib::render::flatten(&img, &[]);
     let fl = t.elapsed();
     println!(
         "{}x{} ({} KB png): decode {:?}, alpha-scan {:?} ({alpha}), to-texture {:?}, thumbnail {:?} ({}x{}), fast-png-encode {:?} ({} KB), flatten {:?} ({} px)",

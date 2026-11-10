@@ -114,7 +114,7 @@ struct Toast {
     until: Instant,
 }
 
-pub struct MarklyApp {
+pub struct SkribApp {
     ctx: egui::Context,
     store: Option<Store>,
     writer: Option<Writer>,
@@ -156,10 +156,10 @@ pub struct MarklyApp {
     trace: bool,
     bench_exit: bool,
     first_frame_done: bool,
-    /// Developer aid: `MARKLY_DEBUG_SCREENSHOT=<png>` saves a window
+    /// Developer aid: `SKRIB_DEBUG_SCREENSHOT=<png>` saves a window
     /// screenshot once the document is shown, then exits.
     debug_shot: Option<(PathBuf, u32)>,
-    /// Developer aid: `MARKLY_DEBUG_SCRIPT=<file>` replays synthetic input.
+    /// Developer aid: `SKRIB_DEBUG_SCRIPT=<file>` replays synthetic input.
     script: Option<script::Script>,
 }
 
@@ -205,7 +205,7 @@ fn shape_size(shape: &Shape) -> f32 {
     }
 }
 
-impl MarklyApp {
+impl SkribApp {
     pub fn new(
         cc: &eframe::CreationContext<'_>,
         store: Option<Store>,
@@ -232,7 +232,7 @@ impl MarklyApp {
         let clip = ClipboardWorker::spawn(clip_tx, move || c.request_repaint());
         let (bg_tx, bg_rx) = mpsc::channel();
 
-        let mut app = MarklyApp {
+        let mut app = SkribApp {
             ctx: ctx.clone(),
             store,
             writer,
@@ -267,15 +267,15 @@ impl MarklyApp {
             drag_out_ended: Arc::default(),
             window_size: None,
             applied_theme: None,
-            trace: std::env::var_os("MARKLY_TRACE").is_some(),
-            bench_exit: std::env::var_os("MARKLY_BENCH_EXIT").is_some(),
+            trace: std::env::var_os("SKRIB_TRACE").is_some(),
+            bench_exit: std::env::var_os("SKRIB_BENCH_EXIT").is_some(),
             first_frame_done: false,
-            debug_shot: std::env::var_os("MARKLY_DEBUG_SCREENSHOT").map(|p| (PathBuf::from(p), 0)),
-            script: std::env::var_os("MARKLY_DEBUG_SCRIPT").and_then(|p| {
+            debug_shot: std::env::var_os("SKRIB_DEBUG_SCREENSHOT").map(|p| (PathBuf::from(p), 0)),
+            script: std::env::var_os("SKRIB_DEBUG_SCRIPT").and_then(|p| {
                 match script::Script::load(Path::new(&p)) {
                     Ok(s) => Some(s),
                     Err(e) => {
-                        eprintln!("markly: bad script: {e}");
+                        eprintln!("skrib: bad script: {e}");
                         None
                     }
                 }
@@ -319,13 +319,13 @@ impl MarklyApp {
         let ctx = self.ctx.clone();
         let store = self.store.clone();
         std::thread::Builder::new()
-            .name("markly-load".into())
+            .name("skrib-load".into())
             .spawn(move || {
                 let t0 = Instant::now();
                 let result = load_document(source, store.as_ref(), max_tex).map(Box::new);
-                if std::env::var_os("MARKLY_TRACE").is_some() {
+                if std::env::var_os("SKRIB_TRACE").is_some() {
                     eprintln!(
-                        "[markly] background load {:.1} ms",
+                        "[skrib] background load {:.1} ms",
                         t0.elapsed().as_secs_f64() * 1000.0
                     );
                 }
@@ -384,7 +384,7 @@ impl MarklyApp {
         self.selection = None;
         self.fit_mode = true;
         self.history.mark_stale();
-        if std::env::var_os("MARKLY_DEBUG_SELECT_LAST").is_some() {
+        if std::env::var_os("SKRIB_DEBUG_SELECT_LAST").is_some() {
             self.selection = self
                 .doc
                 .as_ref()
@@ -395,7 +395,7 @@ impl MarklyApp {
             && let Some(t0) = PROCESS_START.get()
         {
             eprintln!(
-                "[markly] document ready at {:.1} ms (load took {:.1} ms)",
+                "[skrib] document ready at {:.1} ms (load took {:.1} ms)",
                 t0.elapsed().as_secs_f64() * 1000.0,
                 self.load_started.elapsed().as_secs_f64() * 1000.0
             );
@@ -485,11 +485,11 @@ impl MarklyApp {
         if let Some(w) = &mut self.writer
             && !w.shutdown(Duration::from_secs(5))
         {
-            eprintln!("markly: timed out flushing autosave");
+            eprintln!("skrib: timed out flushing autosave");
         }
         if self.trace {
             eprintln!(
-                "[markly] shutdown took {:.1} ms",
+                "[skrib] shutdown took {:.1} ms",
                 t0.elapsed().as_secs_f64() * 1000.0
             );
         }
@@ -850,7 +850,7 @@ impl MarklyApp {
         let res = dragout::prepare(&od.image, &od.doc.annotations, &name).and_then(|p| {
             if self.trace {
                 let ms = t0.elapsed().as_secs_f64() * 1000.0;
-                eprintln!("[markly] drag-out render {ms:.1} ms");
+                eprintln!("[skrib] drag-out render {ms:.1} ms");
             }
             dragout::start(frame, p, self.drag_out_ended.clone(), self.ctx.clone())
         });
@@ -1151,7 +1151,7 @@ impl MarklyApp {
             (ToastKind::Info, false) => (Color32::from_rgb(36, 38, 44), Color32::WHITE),
         };
         let text = t.text.clone();
-        egui::Area::new(egui::Id::unique("markly-toast"))
+        egui::Area::new(egui::Id::unique("skrib-toast"))
             .order(egui::Order::Tooltip)
             .anchor(egui::Align2::CENTER_BOTTOM, egui::vec2(0.0, -22.0))
             .interactable(false)
@@ -1174,7 +1174,7 @@ impl MarklyApp {
     }
 }
 
-impl eframe::App for MarklyApp {
+impl eframe::App for SkribApp {
     fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame) {
         if self.applied_theme != Some(self.settings.theme) {
             theme::apply(&self.ctx, self.settings.theme);
@@ -1194,7 +1194,7 @@ impl eframe::App for MarklyApp {
             .fill(pal.panel)
             .inner_margin(egui::Margin::symmetric(8, 0));
 
-        egui::Panel::top("markly-top")
+        egui::Panel::top("skrib-top")
             .exact_size(46.0)
             .resizable(false)
             .frame(bar_frame)
@@ -1202,7 +1202,7 @@ impl eframe::App for MarklyApp {
         if std::mem::take(&mut self.drag_out_requested) {
             self.start_drag_out(frame);
         }
-        egui::Panel::left("markly-tools")
+        egui::Panel::left("skrib-tools")
             .exact_size(64.0)
             .resizable(false)
             .frame(
@@ -1212,7 +1212,7 @@ impl eframe::App for MarklyApp {
             )
             .show(ui, |ui| self.tool_rail(ui, &pal));
         if self.settings.history_open {
-            egui::Panel::right("markly-history")
+            egui::Panel::right("skrib-history")
                 .default_size(250.0)
                 .size_range(200.0..=420.0)
                 .resizable(true)
@@ -1234,7 +1234,7 @@ impl eframe::App for MarklyApp {
                 && let Some(t0) = PROCESS_START.get()
             {
                 eprintln!(
-                    "[markly] first frame at {:.1} ms",
+                    "[skrib] first frame at {:.1} ms",
                     t0.elapsed().as_secs_f64() * 1000.0
                 );
             }
@@ -1264,7 +1264,7 @@ impl eframe::App for MarklyApp {
     }
 }
 
-impl MarklyApp {
+impl SkribApp {
     fn debug_screenshot_tick(&mut self) {
         let Some((path, frames)) = &mut self.debug_shot else {
             return;
@@ -1303,7 +1303,7 @@ fn save_screenshot(ctx: &egui::Context, path: PathBuf, close: bool) {
         if let Some(rgba) = RgbaImage::from_raw(w as u32, h as u32, raw)
             && let Err(e) = rgba.save(&path)
         {
-            eprintln!("markly: screenshot failed: {e}");
+            eprintln!("skrib: screenshot failed: {e}");
         }
         if close {
             c.send_viewport_cmd(egui::ViewportCommand::Close);

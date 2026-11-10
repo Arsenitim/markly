@@ -1,18 +1,21 @@
-//! Linux desktop integration: `markly --install-desktop-entry` registers
-//! a `.desktop` launcher and hicolor icons for the current user, so Markly
+//! Linux desktop integration: `skrib --install-desktop-entry` registers
+//! a `.desktop` launcher and hicolor icons for the current user, so Skrib
 //! appears in the application grid/menu and its running window gets the
-//! right icon (GNOME and KDE match the Wayland app id `markly` to
-//! `markly.desktop`). `--uninstall-desktop-entry` removes them again.
+//! right icon (GNOME and KDE match the Wayland app id `skrib` to
+//! `skrib.desktop`). `--uninstall-desktop-entry` removes them again.
 //!
 //! Files written (under `$XDG_DATA_HOME`, default `~/.local/share`):
-//! `applications/markly.desktop`, `icons/hicolor/<N>x<N>/apps/markly.png`,
-//! `icons/hicolor/scalable/apps/markly.svg`.
+//! `applications/skrib.desktop`, `icons/hicolor/<N>x<N>/apps/skrib.png`,
+//! `icons/hicolor/scalable/apps/skrib.svg`.
 
 use crate::icon;
 use std::io;
 use std::path::{Path, PathBuf};
 
-pub const APP_ID: &str = "markly";
+pub const APP_ID: &str = "skrib";
+/// The app id used before the rename; its launcher and icons are removed
+/// when the new ones are installed.
+const LEGACY_APP_ID: &str = "markly";
 const PNG_SIZES: [u32; 8] = [16, 24, 32, 48, 64, 128, 256, 512];
 
 fn data_home() -> io::Result<PathBuf> {
@@ -50,7 +53,7 @@ pub fn desktop_entry(exe: &Path) -> String {
     format!(
         "[Desktop Entry]
 Type=Application
-Name=Markly
+Name=Skrib
 GenericName=Image Annotator
 Comment=Paste an image, annotate it, copy the result
 Exec={} %f
@@ -67,12 +70,16 @@ StartupWMClass={APP_ID}
 }
 
 fn icon_paths(base: &Path) -> Vec<(PathBuf, Option<u32>)> {
+    icon_paths_for(base, APP_ID)
+}
+
+fn icon_paths_for(base: &Path, id: &str) -> Vec<(PathBuf, Option<u32>)> {
     let hicolor = base.join("icons/hicolor");
     let mut v: Vec<_> = PNG_SIZES
         .iter()
-        .map(|&s| (hicolor.join(format!("{s}x{s}/apps/{APP_ID}.png")), Some(s)))
+        .map(|&s| (hicolor.join(format!("{s}x{s}/apps/{id}.png")), Some(s)))
         .collect();
-    v.push((hicolor.join(format!("scalable/apps/{APP_ID}.svg")), None));
+    v.push((hicolor.join(format!("scalable/apps/{id}.svg")), None));
     v
 }
 
@@ -96,6 +103,7 @@ pub fn install_into(base: &Path, exe: &Path) -> io::Result<Vec<PathBuf>> {
     let entry = base.join(format!("applications/{APP_ID}.desktop"));
     crate::store::atomic_write(&entry, desktop_entry(exe).as_bytes())?;
     written.push(entry);
+    remove_files_for(base, LEGACY_APP_ID)?;
     refresh_caches(base);
     Ok(written)
 }
@@ -105,9 +113,16 @@ pub fn uninstall() -> io::Result<Vec<PathBuf>> {
 }
 
 pub fn uninstall_from(base: &Path) -> io::Result<Vec<PathBuf>> {
+    let mut removed = remove_files_for(base, APP_ID)?;
+    removed.extend(remove_files_for(base, LEGACY_APP_ID)?);
+    refresh_caches(base);
+    Ok(removed)
+}
+
+fn remove_files_for(base: &Path, id: &str) -> io::Result<Vec<PathBuf>> {
     let mut removed = Vec::new();
-    let mut paths: Vec<PathBuf> = icon_paths(base).into_iter().map(|(p, _)| p).collect();
-    paths.push(base.join(format!("applications/{APP_ID}.desktop")));
+    let mut paths: Vec<PathBuf> = icon_paths_for(base, id).into_iter().map(|(p, _)| p).collect();
+    paths.push(base.join(format!("applications/{id}.desktop")));
     for p in paths {
         match std::fs::remove_file(&p) {
             Ok(()) => removed.push(p),
@@ -115,7 +130,6 @@ pub fn uninstall_from(base: &Path) -> io::Result<Vec<PathBuf>> {
             Err(e) => return Err(e),
         }
     }
-    refresh_caches(base);
     Ok(removed)
 }
 
@@ -144,8 +158,8 @@ mod tests {
 
     #[test]
     fn exec_quoting() {
-        assert_eq!(exec_quote("/usr/bin/markly"), "/usr/bin/markly");
-        assert_eq!(exec_quote("/home/a b/markly"), "\"/home/a b/markly\"");
+        assert_eq!(exec_quote("/usr/bin/skrib"), "/usr/bin/skrib");
+        assert_eq!(exec_quote("/home/a b/skrib"), "\"/home/a b/skrib\"");
         assert_eq!(exec_quote("/x/$HOME\"q/m"), "\"/x/\\$HOME\\\"q/m\"");
         assert_eq!(exec_quote("/x y/100%/m"), "\"/x y/100%%/m\"");
         assert_eq!(exec_quote("/x/100%/m"), "/x/100%%/m");
@@ -153,17 +167,35 @@ mod tests {
 
     #[test]
     fn install_and_uninstall_roundtrip() {
-        let base = std::env::temp_dir().join(format!("markly-desktop-{}", crate::model::new_document_id()));
-        let written = install_into(&base, Path::new("/opt/My Apps/markly")).unwrap();
+        let base = std::env::temp_dir().join(format!("skrib-desktop-{}", crate::model::new_document_id()));
+        let written = install_into(&base, Path::new("/opt/My Apps/skrib")).unwrap();
         assert_eq!(written.len(), PNG_SIZES.len() + 2);
-        let entry = std::fs::read_to_string(base.join("applications/markly.desktop")).unwrap();
-        assert!(entry.contains("Exec=\"/opt/My Apps/markly\" %f"));
-        assert!(entry.contains("StartupWMClass=markly"));
-        let png = image::open(base.join("icons/hicolor/48x48/apps/markly.png")).unwrap();
+        let entry = std::fs::read_to_string(base.join("applications/skrib.desktop")).unwrap();
+        assert!(entry.contains("Exec=\"/opt/My Apps/skrib\" %f"));
+        assert!(entry.contains("StartupWMClass=skrib"));
+        let png = image::open(base.join("icons/hicolor/48x48/apps/skrib.png")).unwrap();
         assert_eq!(png.width(), 48);
-        assert!(base.join("icons/hicolor/scalable/apps/markly.svg").is_file());
+        assert!(base.join("icons/hicolor/scalable/apps/skrib.svg").is_file());
         assert_eq!(uninstall_from(&base).unwrap().len(), written.len());
-        assert!(!base.join("applications/markly.desktop").exists());
+        assert!(!base.join("applications/skrib.desktop").exists());
+        std::fs::remove_dir_all(base).unwrap();
+    }
+
+    #[test]
+    fn install_removes_legacy_launcher() {
+        let base = std::env::temp_dir().join(format!(
+            "skrib-desktop-legacy-{}",
+            crate::model::new_document_id()
+        ));
+        let old_entry = base.join("applications/markly.desktop");
+        let old_icon = base.join("icons/hicolor/48x48/apps/markly.png");
+        for p in [&old_entry, &old_icon] {
+            std::fs::create_dir_all(p.parent().unwrap()).unwrap();
+            std::fs::write(p, b"old").unwrap();
+        }
+        install_into(&base, Path::new("/usr/bin/skrib")).unwrap();
+        assert!(!old_entry.exists() && !old_icon.exists());
+        assert!(base.join("applications/skrib.desktop").is_file());
         std::fs::remove_dir_all(base).unwrap();
     }
 }

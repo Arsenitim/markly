@@ -1610,23 +1610,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5d15f86d12da44cd8d4ec3c73984537eb7f4cadcb9776a575a0a8a05ca11005c"
 
 [[package]]
-name = "markly"
-version = "0.1.10"
-dependencies = [
- "ab_glyph",
- "arboard",
- "directories",
- "drag",
- "eframe",
- "image",
- "rfd",
- "serde",
- "serde_json",
- "tiny-skia",
- "winresource",
-]
-
-[[package]]
 name = "memchr"
 version = "2.8.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2743,6 +2726,23 @@ name = "simdutf8"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e3a9fe34e3e7a50316060351f37187a3f546bce95496156754b601a5fa71b76e"
+
+[[package]]
+name = "skrib"
+version = "0.1.10"
+dependencies = [
+ "ab_glyph",
+ "arboard",
+ "directories",
+ "drag",
+ "eframe",
+ "image",
+ "rfd",
+ "serde",
+ "serde_json",
+ "tiny-skia",
+ "winresource",
+]
 
 [[package]]
 name = "skrifa"

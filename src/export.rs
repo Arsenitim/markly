@@ -123,7 +123,7 @@ mod tests {
     #[test]
     fn export_file_writes_atomically() {
         let (img, anns) = sample();
-        let dir = std::env::temp_dir().join(format!("markly-export-{}", crate::model::new_document_id()));
+        let dir = std::env::temp_dir().join(format!("skrib-export-{}", crate::model::new_document_id()));
         let path = dir.join("out.png");
         export_file(&img, &anns, &path).unwrap();
         assert_eq!(image::open(&path).unwrap().width(), 300);

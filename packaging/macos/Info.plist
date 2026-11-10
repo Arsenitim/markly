@@ -3,11 +3,11 @@
 <plist version="1.0">
 <dict>
   <key>CFBundleDevelopmentRegion</key><string>en</string>
-  <key>CFBundleDisplayName</key><string>Markly</string>
-  <key>CFBundleName</key><string>Markly</string>
-  <key>CFBundleExecutable</key><string>markly</string>
-  <key>CFBundleIdentifier</key><string>io.github.arsenitim.markly</string>
-  <key>CFBundleIconFile</key><string>Markly</string>
+  <key>CFBundleDisplayName</key><string>Skrib</string>
+  <key>CFBundleName</key><string>Skrib</string>
+  <key>CFBundleExecutable</key><string>skrib</string>
+  <key>CFBundleIdentifier</key><string>com.developitbest.skrib</string>
+  <key>CFBundleIconFile</key><string>Skrib</string>
   <key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
   <key>CFBundlePackageType</key><string>APPL</string>
   <key>CFBundleShortVersionString</key><string>@VERSION@</string>

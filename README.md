@@ -1,7 +1,4 @@
-# Markly
-
-> **Provisional name.** "Markly" is a placeholder until the project picks a
-> permanent, trademark-checked name.
+# Skrib
 
 A small, fast, local-first image annotation utility for Windows, macOS and
 Linux. Built with Rust and egui.
@@ -9,15 +6,18 @@ Linux. Built with Rust and egui.
 **Paste an image, annotate it, copy the result, close the app.** Your work is
 remembered automatically, even if you never save it.
 
-**Website and downloads:** [markly.developitbest.com](https://markly.developitbest.com)
+**Website and downloads:** [skrib.developitbest.com](https://skrib.developitbest.com)
 
-![Markly on macOS (light theme) with an annotated screenshot and the history panel](docs/screenshot-macos.png)
+<sub>Formerly called Markly (up to 0.1.10). Your existing history moves over
+automatically the first time Skrib starts.</sub>
+
+![Skrib on macOS (light theme) with an annotated screenshot and the history panel](docs/screenshot-macos.png)
 <sub>macOS</sub>
 
-![Markly on Windows (light theme) with an annotated screenshot and the history panel](docs/screenshot-windows.png)
+![Skrib on Windows (light theme) with an annotated screenshot and the history panel](docs/screenshot-windows.png)
 <sub>Windows</sub>
 
-![Markly on Linux (dark theme) with an annotated screenshot and the history panel](docs/screenshot.png)
+![Skrib on Linux (dark theme) with an annotated screenshot and the history panel](docs/screenshot.png)
 <sub>Linux</sub>
 
 ## Features
@@ -76,19 +76,19 @@ text, not on the image.
 ## Install / run
 
 Download the archive for your platform from the
-[latest release](https://github.com/Arsenitim/markly/releases/latest) and
+[latest release](https://github.com/Arsenitim/skrib/releases/latest) and
 unpack it. There is no installer and no auto-update.
 
-- **Linux (x86_64):** run `./markly`. To add Markly with its icon to your
+- **Linux (x86_64):** run `./skrib`. To add Skrib with its icon to your
   application launcher (GNOME, KDE, etc.), run once:
-  `./markly --install-desktop-entry`. This writes `markly.desktop` and icons
+  `./skrib --install-desktop-entry`. This writes `skrib.desktop` and icons
   under `~/.local/share` and points the launcher at the binary's current
   location, so run it again if you move the binary.
-  `./markly --uninstall-desktop-entry` removes them.
-- **macOS (Apple Silicon and Intel, one universal app):** move `Markly.app` to Applications. The app is
+  `./skrib --uninstall-desktop-entry` removes them.
+- **macOS (Apple Silicon and Intel, one universal app):** move `Skrib.app` to Applications. The app is
   ad-hoc signed but not notarised, so the first launch is blocked. Either
-  right-click → Open, or run `xattr -dr com.apple.quarantine /Applications/Markly.app`.
-- **Windows (x86_64):** run `markly.exe`. It carries the Markly icon; pin it
+  right-click → Open, or run `xattr -dr com.apple.quarantine /Applications/Skrib.app`.
+- **Windows (x86_64):** run `skrib.exe`. It carries the Skrib icon; pin it
   to the taskbar or Start, or create a shortcut, as you like.
 - **Linux runtime libraries** (present on virtually every desktop; loaded at
   runtime, so building needs no `-dev` packages):
@@ -102,9 +102,9 @@ unpack it. There is no installer and no auto-update.
 
 | OS | Location |
 |---|---|
-| Linux | `$XDG_DATA_HOME/markly` (usually `~/.local/share/markly`) |
-| macOS | `~/Library/Application Support/Markly` |
-| Windows | `%APPDATA%\Markly\data` |
+| Linux | `$XDG_DATA_HOME/skrib` (usually `~/.local/share/skrib`) |
+| macOS | `~/Library/Application Support/Skrib` |
+| Windows | `%APPDATA%\Skrib\data` |
 
 Each document is a folder containing the untouched original image,
 `document.json` (editable annotations) and `thumbnail.png`. The 300 most
@@ -114,14 +114,14 @@ Nothing ever leaves your computer.
 ## Clipboard notes and platform limitations
 
 - **Linux (X11 and Wayland): paste before you quit.** The clipboard is served
-  by the application that copied, so an image copied from Markly disappears
-  from the clipboard when Markly closes (unless a clipboard manager such as
+  by the application that copied, so an image copied from Skrib disappears
+  from the clipboard when Skrib closes (unless a clipboard manager such as
   Klipper, CopyQ or a GNOME clipboard extension has kept a copy). This is a
   deliberate simplification: no helper process stays behind. Windows and
-  macOS keep the copied image after Markly quits.
+  macOS keep the copied image after Skrib quits.
 - **No drag-out on Linux.** The drag-source APIs available to Rust need a GTK
-  window, and Markly's window is not one; use Copy or Export instead.
-- On Wayland, Markly uses the `wlr/ext-data-control` protocol when the
+  window, and Skrib's window is not one; use Copy or Export instead.
+- On Wayland, Skrib uses the `wlr/ext-data-control` protocol when the
   compositor offers it, and otherwise the X11 clipboard through XWayland.
   Verified on GNOME 50 (Wayland) only; see [docs/QA_CHECKLIST.md](docs/QA_CHECKLIST.md).
 - Images go through the platform's standard image clipboard formats via
@@ -139,7 +139,7 @@ Requires a stable Rust toolchain (1.88 or newer).
 
 ```sh
 cargo run --release              # run
-cargo build --release            # target/release/markly
+cargo build --release            # target/release/skrib
 cargo fmt && cargo clippy --all-targets && cargo test
 ```
 

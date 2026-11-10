@@ -1,4 +1,4 @@
-//! Developer aid for end-to-end checks: `MARKLY_DEBUG_SCRIPT=<file>` feeds
+//! Developer aid for end-to-end checks: `SKRIB_DEBUG_SCRIPT=<file>` feeds
 //! synthetic input events through egui's normal input pipeline, one step
 //! per frame. Not used in normal operation.
 //!

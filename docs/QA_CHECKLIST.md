@@ -2,7 +2,7 @@
 
 Run on each target platform before a release, and record the OS, desktop
 and session type (X11/Wayland) next to every result. Use a throwaway data
-directory if you prefer: `MARKLY_DATA_DIR=/tmp/markly-qa markly`.
+directory if you prefer: `SKRIB_DATA_DIR=/tmp/skrib-qa skrib`.
 
 Status legend: ✅ verified · ❌ failed · — not yet tested
 
@@ -23,7 +23,7 @@ Status legend: ✅ verified · ❌ failed · — not yet tested
 | Pasting into browsers, chat apps, image editors | — | — | — | — |
 
 The Linux results were exercised with the developer script runner
-(`MARKLY_DEBUG_SCRIPT`), which feeds real egui input events, plus the system
+(`SKRIB_DEBUG_SCRIPT`), which feeds real egui input events, plus the system
 clipboard tools. A human pass with a real mouse and keyboard is still
 recommended.
 
@@ -34,8 +34,8 @@ recommended.
 - [ ] Paste, annotate, close the window without saving, relaunch: the same
       image and annotations come back, still editable (select one, move it).
 - [ ] The window size is restored.
-- [ ] `markly path/to/image.png` opens that file as a new document.
-- [ ] `markly --version` and `markly --help` print and exit.
+- [ ] `skrib path/to/image.png` opens that file as a new document.
+- [ ] `skrib --version` and `skrib --help` print and exit.
 - [ ] Launch with a corrupted `settings.json` (write garbage into it): the app starts with defaults.
 - [ ] Corrupt the last document's `document.json`: the app starts empty and
       shows a short error; the other history entries are still listed.
@@ -59,9 +59,9 @@ annotation (including pixelation and text), with no selection handles.
 - [ ] Chat apps (Slack, Discord, Teams, Telegram, Signal)
 - [ ] Image editors (GIMP, Paint, Preview "New from Clipboard", Krita)
 - [ ] Office (LibreOffice, Word, Pages)
-- [ ] Windows/macOS: copy, close Markly, then paste elsewhere. It still works.
+- [ ] Windows/macOS: copy, close Skrib, then paste elsewhere. It still works.
       (On Linux the image is expected to disappear on quit; check that no
-      `markly` process remains afterwards: `pgrep -a markly`.)
+      `skrib` process remains afterwards: `pgrep -a skrib`.)
 - [ ] **Linux:** repeat on X11 and on Wayland (GNOME, KDE Plasma, a wlroots compositor).
 - [ ] Cmd+C while editing a text label copies the selected text only.
 
@@ -114,12 +114,12 @@ For each tool (A, R, E, T, P, X), with several colours and sizes:
 
 ## 8. App icon and launcher
 
-- [ ] Linux: `markly --install-desktop-entry`. Markly appears in the app
+- [ ] Linux: `skrib --install-desktop-entry`. Skrib appears in the app
       grid/menu with its icon, launches from there, and the running window
       shows the icon in the dash and Alt+Tab. `--uninstall-desktop-entry`
       removes it.
-- [ ] macOS: `Markly.app` shows the icon in Finder and in the Dock while running.
-- [ ] Windows: `markly.exe` shows the icon in Explorer, the taskbar and Alt+Tab.
+- [ ] macOS: `Skrib.app` shows the icon in Finder and in the Dock while running.
+- [ ] Windows: `skrib.exe` shows the icon in Explorer, the taskbar and Alt+Tab.
 
 ## 9. Robustness
 

@@ -1,26 +1,26 @@
 // Hide the console window on Windows release builds.
 #![cfg_attr(all(windows, not(debug_assertions)), windows_subsystem = "windows")]
 
-use markly::app::{MarklyApp, PROCESS_START, icons};
-use markly::store::Store;
+use skrib::app::{PROCESS_START, SkribApp, icons};
+use skrib::store::Store;
 use std::path::PathBuf;
 use std::process::ExitCode;
 use std::time::Instant;
 
 const USAGE: &str = "\
-Markly (provisional name) — paste, annotate, copy.
+Skrib — paste, annotate, copy.
 
-Usage: markly [IMAGE]
+Usage: skrib [IMAGE]
 
 Options:
   -h, --help                   Show this help
   -V, --version                Show version
-  --install-desktop-entry      Linux: add Markly with its icon to the app launcher
+  --install-desktop-entry      Linux: add Skrib with its icon to the app launcher
   --uninstall-desktop-entry    Linux: remove the launcher entry and icons
 
 Environment:
-  MARKLY_DATA_DIR  Override the data directory
-  MARKLY_TRACE     Print startup/shutdown timings to stderr";
+  SKRIB_DATA_DIR  Override the data directory
+  SKRIB_TRACE     Print startup/shutdown timings to stderr";
 
 fn main() -> ExitCode {
     let _ = PROCESS_START.set(Instant::now());
@@ -35,7 +35,7 @@ fn main() -> ExitCode {
             return ExitCode::SUCCESS;
         }
         Some("-V" | "--version") => {
-            println!("markly {}", env!("CARGO_PKG_VERSION"));
+            println!("skrib {}", env!("CARGO_PKG_VERSION"));
             return ExitCode::SUCCESS;
         }
         _ => {}
@@ -43,13 +43,13 @@ fn main() -> ExitCode {
 
     let file = args.iter().map(PathBuf::from).find(|p| p.is_file());
     if file.is_none() && !args.is_empty() {
-        eprintln!("markly: ignoring arguments (no readable image file given)");
+        eprintln!("skrib: ignoring arguments (no readable image file given)");
     }
 
     let store = match Store::open_default() {
         Ok(s) => Some(s),
         Err(e) => {
-            eprintln!("markly: storage unavailable: {e}");
+            eprintln!("skrib: storage unavailable: {e}");
             None
         }
     };
@@ -59,8 +59,8 @@ fn main() -> ExitCode {
 
     let options = eframe::NativeOptions {
         viewport: eframe::egui::ViewportBuilder::default()
-            .with_title("Markly")
-            .with_app_id("markly")
+            .with_title("Skrib")
+            .with_app_id("skrib")
             .with_inner_size(size)
             .with_min_inner_size([480.0, 360.0])
             .with_drag_and_drop(true)
@@ -70,14 +70,14 @@ fn main() -> ExitCode {
     };
 
     let result = eframe::run_native(
-        "Markly",
+        "Skrib",
         options,
-        Box::new(move |cc| Ok(Box::new(MarklyApp::new(cc, store, settings, file)))),
+        Box::new(move |cc| Ok(Box::new(SkribApp::new(cc, store, settings, file)))),
     );
     match result {
         Ok(()) => ExitCode::SUCCESS,
         Err(e) => {
-            eprintln!("markly: {e}");
+            eprintln!("skrib: {e}");
             ExitCode::FAILURE
         }
     }
@@ -85,15 +85,15 @@ fn main() -> ExitCode {
 
 fn desktop_entry(install: bool) -> ExitCode {
     if !cfg!(all(unix, not(target_os = "macos"))) {
-        eprintln!("markly: desktop entries are a Linux feature");
+        eprintln!("skrib: desktop entries are a Linux feature");
         return ExitCode::FAILURE;
     }
     let result = if install {
         std::env::current_exe()
             .and_then(|exe| std::fs::canonicalize(&exe).or(Ok(exe)))
-            .and_then(|exe| markly::desktop::install(&exe))
+            .and_then(|exe| skrib::desktop::install(&exe))
     } else {
-        markly::desktop::uninstall()
+        skrib::desktop::uninstall()
     };
     match result {
         Ok(paths) => {
@@ -102,13 +102,13 @@ fn desktop_entry(install: bool) -> ExitCode {
                 println!("{verb} {}", p.display());
             }
             if install {
-                println!("Markly now appears in your application launcher.");
+                println!("Skrib now appears in your application launcher.");
                 println!("If you move this binary, run --install-desktop-entry again.");
             }
             ExitCode::SUCCESS
         }
         Err(e) => {
-            eprintln!("markly: {e}");
+            eprintln!("skrib: {e}");
             ExitCode::FAILURE
         }
     }

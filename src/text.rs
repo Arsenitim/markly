@@ -28,19 +28,19 @@ impl TextFormat {
 /// text is SemiBold, bold is ExtraBold, plus the matching italics.
 static FONTS: [(&str, &[u8]); 4] = [
     (
-        "markly-annotation",
+        "skrib-annotation",
         include_bytes!("../assets/fonts/NotoSans-SemiBold.ttf"),
     ),
     (
-        "markly-annotation-bold",
+        "skrib-annotation-bold",
         include_bytes!("../assets/fonts/NotoSans-ExtraBold.ttf"),
     ),
     (
-        "markly-annotation-italic",
+        "skrib-annotation-italic",
         include_bytes!("../assets/fonts/NotoSans-SemiBoldItalic.ttf"),
     ),
     (
-        "markly-annotation-bold-italic",
+        "skrib-annotation-bold-italic",
         include_bytes!("../assets/fonts/NotoSans-ExtraBoldItalic.ttf"),
     ),
 ];

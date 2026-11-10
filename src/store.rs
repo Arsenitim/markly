@@ -38,14 +38,20 @@ pub struct Store {
 }
 
 impl Store {
-    /// The platform data directory, overridable with `MARKLY_DATA_DIR`
+    /// The platform data directory, overridable with `SKRIB_DATA_DIR`
     /// (used by tests and benchmarks).
     pub fn open_default() -> io::Result<Store> {
-        let root = match std::env::var_os("MARKLY_DATA_DIR") {
+        let root = match std::env::var_os("SKRIB_DATA_DIR") {
             Some(p) => PathBuf::from(p),
-            None => directories::ProjectDirs::from("", "", "Markly")
-                .map(|d| d.data_dir().to_path_buf())
-                .ok_or_else(|| io::Error::other("no home directory"))?,
+            None => {
+                let dir =
+                    |name| directories::ProjectDirs::from("", "", name).map(|d| d.data_dir().to_path_buf());
+                let root = dir("Skrib").ok_or_else(|| io::Error::other("no home directory"))?;
+                if let Some(legacy) = dir("Markly") {
+                    migrate_legacy_dir(&legacy, &root);
+                }
+                root
+            }
         };
         Store::open(root)
     }
@@ -201,6 +207,27 @@ pub struct HistoryEntry {
     pub source_name: Option<String>,
 }
 
+/// One-time move of the data directory used before the app was renamed
+/// from Markly to Skrib, so earlier history survives the rename. Only runs
+/// while the new directory does not exist yet; a failure just means the app
+/// starts with empty history and the old folder stays where it was.
+pub fn migrate_legacy_dir(legacy: &Path, root: &Path) {
+    if root.exists() || !legacy.is_dir() {
+        return;
+    }
+    if let Some(parent) = root.parent() {
+        let _ = fs::create_dir_all(parent);
+    }
+    if fs::rename(legacy, root).is_ok() {
+        // Windows keeps the data in `<AppData>\Markly\data`; drop the now
+        // empty `Markly` folder (remove_dir refuses non-empty directories).
+        #[cfg(windows)]
+        if let Some(parent) = legacy.parent() {
+            let _ = fs::remove_dir(parent);
+        }
+    }
+}
+
 /// Write `bytes` to `path` atomically: a crash leaves either the old or the
 /// new file, never a truncated one.
 pub fn atomic_write(path: &Path, bytes: &[u8]) -> io::Result<()> {
@@ -342,7 +369,7 @@ impl Writer {
     pub fn spawn(store: Store, events: Sender<WriterEvent>, notify: impl Fn() + Send + 'static) -> Writer {
         let (tx, rx) = mpsc::channel::<Job>();
         let handle = std::thread::Builder::new()
-            .name("markly-writer".into())
+            .name("skrib-writer".into())
             .spawn(move || writer_loop(store, rx, events, notify))
             .expect("spawn writer thread");
         Writer {
@@ -492,8 +519,7 @@ mod tests {
     use crate::model::{PALETTE, Shape, Style};
 
     fn temp_store(name: &str) -> Store {
-        let dir =
-            std::env::temp_dir().join(format!("markly-test-{name}-{}", crate::model::new_document_id()));
+        let dir = std::env::temp_dir().join(format!("skrib-test-{name}-{}", crate::model::new_document_id()));
         Store::open(dir).unwrap()
     }
 
@@ -505,6 +531,25 @@ mod tests {
         let dir = store.doc_dir(&doc.id);
         atomic_write(&dir.join(&doc.original_file), &png_bytes(doc.width, doc.height)).unwrap();
         atomic_write(&dir.join(DOCUMENT_JSON), &serde_json::to_vec(doc).unwrap()).unwrap();
+    }
+
+    #[test]
+    fn legacy_dir_is_moved_once() {
+        let base = std::env::temp_dir().join(format!("skrib-migrate-{}", crate::model::new_document_id()));
+        let legacy = base.join("Markly");
+        let root = base.join("Skrib");
+        fs::create_dir_all(legacy.join("documents/a")).unwrap();
+        fs::write(legacy.join("settings.json"), b"{}").unwrap();
+        migrate_legacy_dir(&legacy, &root);
+        assert!(root.join("documents/a").is_dir());
+        assert!(root.join("settings.json").is_file());
+        assert!(!legacy.exists());
+        // An existing new directory is never overwritten.
+        fs::create_dir_all(legacy.join("documents/b")).unwrap();
+        migrate_legacy_dir(&legacy, &root);
+        assert!(!root.join("documents/b").exists());
+        assert!(legacy.join("documents/b").is_dir());
+        fs::remove_dir_all(&base).unwrap();
     }
 
     #[test]

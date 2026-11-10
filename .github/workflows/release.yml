@@ -49,9 +49,9 @@ jobs:
               cargo build --release --locked --target "$t"
             done
             mkdir -p target/universal-apple-darwin/release
-            lipo -create -output target/universal-apple-darwin/release/markly \
-              target/aarch64-apple-darwin/release/markly target/x86_64-apple-darwin/release/markly
-            lipo -info target/universal-apple-darwin/release/markly
+            lipo -create -output target/universal-apple-darwin/release/skrib \
+              target/aarch64-apple-darwin/release/skrib target/x86_64-apple-darwin/release/skrib
+            lipo -info target/universal-apple-darwin/release/skrib
           else
             cargo build --release --locked --target ${{ matrix.target }}
           fi
@@ -61,9 +61,9 @@ jobs:
           set -euo pipefail
           version="${GITHUB_REF_NAME#v}"
           [[ "$GITHUB_REF_TYPE" == "tag" ]] || version="dev-${GITHUB_SHA::7}"
-          dir="markly-${version}-${{ matrix.name }}"
+          dir="skrib-${version}-${{ matrix.name }}"
           mkdir "$dir"
-          bin="target/${{ matrix.target }}/release/markly"
+          bin="target/${{ matrix.target }}/release/skrib"
           [[ -f "$bin.exe" ]] && bin="$bin.exe"
           cp README.md LICENSE-MIT LICENSE-APACHE "$dir/"
           cp assets/fonts/OFL.txt "$dir/FONT-LICENSE-OFL.txt"
@@ -75,16 +75,16 @@ jobs:
               ;;
             app-zip)
               # macOS: a real application bundle so Finder/Dock show the icon.
-              app="$dir/Markly.app/Contents"
+              app="$dir/Skrib.app/Contents"
               mkdir -p "$app/MacOS" "$app/Resources"
-              cp "$bin" "$app/MacOS/markly"
-              iconutil -c icns assets/icons/macos/markly.iconset -o "$app/Resources/Markly.icns"
+              cp "$bin" "$app/MacOS/skrib"
+              iconutil -c icns assets/icons/macos/skrib.iconset -o "$app/Resources/Skrib.icns"
               plist_version=$(grep -m1 '^version' Cargo.toml | cut -d'"' -f2)
               sed "s/@VERSION@/$plist_version/g" packaging/macos/Info.plist > "$app/Info.plist"
               plutil -lint "$app/Info.plist"
               # Ad-hoc signature (not notarised): required for a modified bundle on Apple Silicon.
-              codesign --force --deep --sign - "$dir/Markly.app"
-              codesign --verify --verbose "$dir/Markly.app"
+              codesign --force --deep --sign - "$dir/Skrib.app"
+              codesign --verify --verbose "$dir/Skrib.app"
               ditto -c -k --keepParent "$dir" "$dir.zip"
               echo "ASSET=$dir.zip" >> "$GITHUB_ENV"
               ;;

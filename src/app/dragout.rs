@@ -22,7 +22,7 @@ pub(super) struct Prepared {
 }
 
 fn drag_dir() -> PathBuf {
-    std::env::temp_dir().join("markly-drag")
+    std::env::temp_dir().join("skrib-drag")
 }
 
 /// Whether `path` is a file this module wrote for a drag.
@@ -33,7 +33,7 @@ pub(super) fn is_own_file(path: &Path) -> bool {
             .is_ok_and(|p| std::fs::canonicalize(&dir).is_ok_and(|d| p.starts_with(d)))
 }
 
-/// Renders the image to `<temp>/markly-drag/<file_name>`. Earlier drag files
+/// Renders the image to `<temp>/skrib-drag/<file_name>`. Earlier drag files
 /// are removed first: the receiving app has copied them by now.
 pub(super) fn prepare(image: &RgbaImage, anns: &[Annotation], file_name: &str) -> Result<Prepared, String> {
     let dir = drag_dir();

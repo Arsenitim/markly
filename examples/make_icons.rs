@@ -1,28 +1,28 @@
-//! Regenerates the committed icon assets from `markly::icon`:
+//! Regenerates the committed icon assets from `skrib::icon`:
 //!
 //! ```sh
 //! cargo run --example make_icons
 //! ```
 //!
-//! * `assets/icons/markly.svg`, `markly-{256,512}.png` — general use / README
-//! * `assets/icons/markly.ico` — embedded into the Windows executable
-//! * `assets/icons/macos/markly.iconset/` — turned into `.icns` by `iconutil`
+//! * `assets/icons/skrib.svg`, `skrib-{256,512}.png` — general use / README
+//! * `assets/icons/skrib.ico` — embedded into the Windows executable
+//! * `assets/icons/macos/skrib.iconset/` — turned into `.icns` by `iconutil`
 //!   in the macOS release job
 
 use image::codecs::ico::{IcoEncoder, IcoFrame};
-use markly::icon::{self, MARGIN_DEFAULT, MARGIN_MACOS};
+use skrib::icon::{self, MARGIN_DEFAULT, MARGIN_MACOS};
 use std::path::Path;
 
 fn png(size: u32, margin: f32) -> Vec<u8> {
-    markly::store::encode_png(&icon::render(size, margin)).unwrap()
+    skrib::store::encode_png(&icon::render(size, margin)).unwrap()
 }
 
 fn main() {
     let dir = Path::new("assets/icons");
-    std::fs::create_dir_all(dir.join("macos/markly.iconset")).unwrap();
-    std::fs::write(dir.join("markly.svg"), icon::svg(MARGIN_DEFAULT)).unwrap();
+    std::fs::create_dir_all(dir.join("macos/skrib.iconset")).unwrap();
+    std::fs::write(dir.join("skrib.svg"), icon::svg(MARGIN_DEFAULT)).unwrap();
     for s in [256, 512] {
-        std::fs::write(dir.join(format!("markly-{s}.png")), png(s, MARGIN_DEFAULT)).unwrap();
+        std::fs::write(dir.join(format!("skrib-{s}.png")), png(s, MARGIN_DEFAULT)).unwrap();
     }
 
     let frames: Vec<IcoFrame> = [16, 24, 32, 48, 64, 128, 256]
@@ -33,7 +33,7 @@ fn main() {
         .collect();
     let mut ico = Vec::new();
     IcoEncoder::new(&mut ico).encode_images(&frames).unwrap();
-    std::fs::write(dir.join("markly.ico"), ico).unwrap();
+    std::fs::write(dir.join("skrib.ico"), ico).unwrap();
 
     for (name, size) in [
         ("icon_16x16", 16),
@@ -48,7 +48,7 @@ fn main() {
         ("icon_512x512@2x", 1024),
     ] {
         std::fs::write(
-            dir.join(format!("macos/markly.iconset/{name}.png")),
+            dir.join(format!("macos/skrib.iconset/{name}.png")),
             png(size, MARGIN_MACOS),
         )
         .unwrap();

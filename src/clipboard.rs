@@ -5,7 +5,7 @@
 //! requests and receives results through a channel.
 //!
 //! Copied images are served by this process; on Linux (X11/Wayland) they
-//! disappear from the clipboard when Markly quits unless a clipboard manager
+//! disappear from the clipboard when Skrib quits unless a clipboard manager
 //! keeps them. That is intentional: paste before quitting.
 
 use crate::model::Annotation;
@@ -45,7 +45,7 @@ impl ClipboardWorker {
     pub fn spawn(events: Sender<ClipEvent>, notify: impl Fn() + Send + 'static) -> Self {
         let (tx, rx) = mpsc::channel();
         std::thread::Builder::new()
-            .name("markly-clipboard".into())
+            .name("skrib-clipboard".into())
             .spawn(move || worker(rx, events, notify))
             .expect("spawn clipboard thread");
         Self { tx }
@@ -170,7 +170,7 @@ mod tests {
 
     #[test]
     fn uri_and_path_parsing() {
-        let dir = std::env::temp_dir().join(format!("markly clip {}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("skrib clip {}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
         let file = dir.join("shot 1.png");
         std::fs::write(&file, b"x").unwrap();

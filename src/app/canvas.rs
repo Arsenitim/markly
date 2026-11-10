@@ -4,7 +4,7 @@
 //! [`ViewTransform`]; annotations are never stored in screen coordinates.
 
 use super::theme::{ACCENT, Palette};
-use super::{MarklyApp, OpenDoc, PixelCacheEntry, TextEditing, cmd, icons, rgba_to_color32};
+use super::{OpenDoc, PixelCacheEntry, SkribApp, TextEditing, cmd, icons, rgba_to_color32};
 use crate::geometry::{
     Pt, Rect, ViewTransform, arrow_geometry, curved_arrow_geometry, rect_corner_radius, smooth_stroke,
     snap_angle, square_from,
@@ -51,7 +51,7 @@ pub(super) enum Drag {
 }
 
 pub(super) fn text_edit_id() -> Id {
-    Id::unique("markly-text-edit")
+    Id::unique("skrib-text-edit")
 }
 
 fn to_pos(p: Pt) -> Pos2 {
@@ -71,7 +71,7 @@ pub(super) fn annotation_font(size_points: f32, format: TextFormat) -> FontId {
     )
 }
 
-impl MarklyApp {
+impl SkribApp {
     pub(super) fn canvas(&mut self, ui: &mut egui::Ui, pal: &Palette) {
         let rect = ui.max_rect();
         let resp = ui.allocate_rect(rect, Sense::click_and_drag());
@@ -599,7 +599,7 @@ impl MarklyApp {
         let caret = rgba_to_color32(*color);
         let id = text_edit_id();
         let mut buffer = std::mem::take(&mut ed.buffer);
-        let out = egui::Area::new(Id::unique("markly-text-area"))
+        let out = egui::Area::new(Id::unique("skrib-text-area"))
             .fixed_pos(screen)
             .order(egui::Order::Foreground)
             .show(&self.ctx, |ui| {

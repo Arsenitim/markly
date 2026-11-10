@@ -4,7 +4,7 @@
 use super::icons::{self, Icon};
 use super::theme::{ACCENT, Palette};
 use super::toolbar::icon_button;
-use super::{Bg, MarklyApp};
+use super::{Bg, SkribApp};
 use crate::model::now_ms;
 use crate::store::HistoryEntry;
 use eframe::egui::{
@@ -102,7 +102,7 @@ fn civil_from_days(z: i64) -> (i64, u32, u32) {
     (yoe + era * 400 + i64::from(m <= 2), m, d)
 }
 
-impl MarklyApp {
+impl SkribApp {
     pub(super) fn history_panel(&mut self, ui: &mut egui::Ui, pal: &Palette) {
         let Some(store) = self.store.clone() else {
             ui.label("History is unavailable (no storage directory).");

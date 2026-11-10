@@ -1,6 +1,6 @@
 # Architecture
 
-Markly is a small document editor, not a bitmap painter: the original image
+Skrib is a small document editor, not a bitmap painter: the original image
 is never modified, and every annotation is an editable, serialisable object
 stored in **original-image pixel coordinates**.
 
@@ -133,7 +133,7 @@ file list, then a `file://`/path text. While a text annotation is being
 edited, clipboard events are left to the text field.
 
 Copy: the worker flattens and sets an RGBA image. On Linux the image is served
-by this process, so it leaves the clipboard when Markly quits. That is
+by this process, so it leaves the clipboard when Skrib quits. That is
 intentional and documented ("paste before you quit").
 
 ## Switching to wgpu

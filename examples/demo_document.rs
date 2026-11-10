@@ -3,15 +3,15 @@
 //! QA, visual comparison of preview vs export, and benchmarks.
 //!
 //! ```sh
-//! cargo run --release --example demo_document -- /tmp/markly-demo [WIDTH HEIGHT]
-//! MARKLY_DATA_DIR=/tmp/markly-demo cargo run --release
+//! cargo run --release --example demo_document -- /tmp/skrib-demo [WIDTH HEIGHT]
+//! SKRIB_DATA_DIR=/tmp/skrib-demo cargo run --release
 //! ```
 
-use markly::geometry::{Pt, Rect};
-use markly::model::{Document, PALETTE, Shape, Style, TEXT_SIZES, size_unit};
-use markly::settings::Settings;
-use markly::store::{self, Store};
-use markly::text;
+use skrib::geometry::{Pt, Rect};
+use skrib::model::{Document, PALETTE, Shape, Style, TEXT_SIZES, size_unit};
+use skrib::settings::Settings;
+use skrib::store::{self, Store};
+use skrib::text;
 use std::path::PathBuf;
 
 fn synthetic_screenshot(w: u32, h: u32) -> image::RgbaImage {
@@ -74,14 +74,14 @@ fn synthetic_screenshot(w: u32, h: u32) -> image::RgbaImage {
     }
     // A fake "secret" token to pixelate.
     fill(&mut img, 330.0, 820.0, 520.0, 46.0, [255, 245, 220, 255]);
-    let token = markly::render::render_scaled(
+    let token = skrib::render::render_scaled(
         &img,
-        &[markly::model::Annotation {
+        &[skrib::model::Annotation {
             id: 0,
             shape: Shape::Text {
                 pos: Pt::new(340.0 * s, 826.0 * s),
                 text: "sk-live-4f9a-SECRET-TOKEN".into(),
-                color: markly::model::Rgba::rgb(60, 40, 10),
+                color: skrib::model::Rgba::rgb(60, 40, 10),
                 size: 22.0 * s,
                 format: Default::default(),
             },
@@ -123,7 +123,7 @@ fn main() {
         start: p(1120.0, 600.0),
         end: p(1350.0, 330.0),
         style: st(red, 5.5),
-        bend: markly::geometry::DEFAULT_CURVE_BEND,
+        bend: skrib::geometry::DEFAULT_CURVE_BEND,
     });
     doc.add(Shape::CurvedArrow {
         start: p(300.0, 960.0),
@@ -146,7 +146,7 @@ fn main() {
         })
         .collect();
     doc.add(Shape::Freehand {
-        points: markly::geometry::smooth_stroke(&pts, 4.0),
+        points: skrib::geometry::smooth_stroke(&pts, 4.0),
         style: st(PALETTE[2].1, 5.5),
     });
     let tsize = TEXT_SIZES[2] * unit;
@@ -156,7 +156,7 @@ fn main() {
         color: red,
         size: tsize,
         // Exercise formatting in preview-vs-export comparisons.
-        format: markly::model::TextFormat {
+        format: skrib::model::TextFormat {
             bold: true,
             underline: true,
             ..Default::default()
@@ -172,7 +172,7 @@ fn main() {
     )
     .unwrap();
     let (thumb, scale) = store::thumbnail_base(&img);
-    let t = markly::render::render_scaled(&thumb, &doc.annotations, scale);
+    let t = skrib::render::render_scaled(&thumb, &doc.annotations, scale);
     store::atomic_write(&dd.join(store::THUMBNAIL_PNG), &store::encode_png(&t).unwrap()).unwrap();
 
     let mut settings = store.load_settings();
@@ -183,7 +183,7 @@ fn main() {
     store.save_settings(&settings).unwrap();
 
     let t0 = std::time::Instant::now();
-    let flat = markly::render::flatten(&img, &doc.annotations);
+    let flat = skrib::render::flatten(&img, &doc.annotations);
     let render_ms = t0.elapsed().as_secs_f64() * 1000.0;
     flat.save(dir.join("export.png")).unwrap();
     println!(

@@ -2,7 +2,7 @@
 
 use super::icons::{self, Icon};
 use super::theme::{ACCENT, Palette};
-use super::{MarklyApp, cmd, presets_for, rgba_to_color32};
+use super::{SkribApp, cmd, presets_for, rgba_to_color32};
 use crate::model::PALETTE;
 use crate::settings::{ThemePref, Tool};
 use eframe::egui::{
@@ -60,7 +60,7 @@ fn separator_h(ui: &mut Ui, pal: &Palette) {
         .hline(rect.x_range(), rect.center().y, Stroke::new(1.0, pal.separator));
 }
 
-impl MarklyApp {
+impl SkribApp {
     pub(super) fn top_bar(&mut self, ui: &mut Ui, pal: &Palette) {
         let has_doc = self.doc.is_some();
         let (can_undo, can_redo) = self

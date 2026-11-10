@@ -1,18 +1,18 @@
 [package]
-name = "markly"
+name = "skrib"
 version = "0.1.10"
 edition = "2024"
 rust-version = "1.88"
-description = "A lightweight, local-first image annotation utility (provisional name)."
+description = "A lightweight, local-first image annotation utility."
 license = "MIT OR Apache-2.0"
 readme = "README.md"
-repository = "https://github.com/Arsenitim/markly"
+repository = "https://github.com/Arsenitim/skrib"
 keywords = ["annotation", "screenshot", "image", "egui"]
 categories = ["graphics", "gui"]
 publish = false
 
 [[bin]]
-name = "markly"
+name = "skrib"
 path = "src/main.rs"
 
 [dependencies]
